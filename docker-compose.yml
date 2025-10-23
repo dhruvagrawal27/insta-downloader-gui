@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  instagram-downloader:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./downloads:/app/downloads
+      - ./temp:/app/temp
+      - ./logs:/app/logs
+    environment:
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - STREAMLIT_THEME_BASE=dark
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  instagram-downloader-batch:
+    build: .
+    ports:
+      - "8502:8501"
+    volumes:
+      - ./downloads:/app/downloads
+      - ./temp:/app/temp
+      - ./logs:/app/logs
+    environment:
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+      - STREAMLIT_THEME_BASE=dark
+    restart: unless-stopped
+    command: ["streamlit", "run", "streamlit_batch_app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

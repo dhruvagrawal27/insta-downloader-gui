@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "insta-downloader-gui"
+version = "1.0.0"
+authors = [
+  { name="ukr", email="ujjwalkrai@gmail.com" }
+]
+description = "A desktop GUI for downloading Instagram Reels, Videos, and more."
+readme = "docs/README.md"
+requires-python = ">=3.8"
+license = { text = "MIT License" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Internet :: WWW/HTTP",
+    "Framework :: PyQt"
+]
+dependencies = [
+    "PyQt6>=6.4.0",
+    "instaloader>=4.9.6",
+    "moviepy==1.0.3",
+    "numpy<2.3",
+    "Pillow>=9.5.0",
+    "requests>=2.28.0",
+    "ffmpeg-python>=0.2.0",
+    "openai-whisper"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8", 
+    "pytest",
+    "requests-mock",
+    "pyinstaller"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/uikraft-hub/insta-downloader-gui"
+"Bug Tracker" = "https://github.com/uikraft-hub/insta-downloader-gui/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
