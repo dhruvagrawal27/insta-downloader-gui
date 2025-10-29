@@ -1,9 +1,9 @@
 """
 Project: insta-downloader-gui
-Author: ukr
+Author: Dhruv Agrawal
 Version: 1.0.0
 License: MIT
-Repository: https://github.com/uikraft-hub/insta-downloader-gui
+Repository: https://github.com/dhruvagrawal27/insta-downloader-gui
 """
 
 import sys

@@ -1,167 +1,394 @@
-# Usage Guide
+# Usage Guide - Instagram Downloader Web App# Usage Guide
 
-A comprehensive guide on how to use the insta-downloader-gui - a PyQt6-based desktop app to download Instagram Reels, posts, and stories quickly and reliably.
 
-## Table of Contents
 
-- [Overview](#overview)
-- [Quick Start](#quick-start)
-- [Installation](#installation)
+A comprehensive guide for using the Instagram Downloader web application with Groq AI transcription.A comprehensive guide on how to use the insta-downloader-gui - a PyQt6-based desktop app to download Instagram Reels, posts, and stories quickly and reliably.
+
+
+
+**See Also**: ## Table of Contents
+
+- [Main README](README.md) - Overview and features
+
+- [Preview Mode Guide](../PREVIEW_MODE_README.md) - Zero local storage mode- [Overview](#overview)
+
+- [Groq Transcription](../GROQ_TRANSCRIPTION_README.md) - AI transcription details- [Quick Start](#quick-start)
+
+- [Quick Start Groq](../QUICK_START_GROQ.md) - 5-minute setup- [Installation](#installation)
+
 - [Running the Application](#running-the-application)
-- [User Interface Guide](#user-interface-guide)
+
+## Table of Contents- [User Interface Guide](#user-interface-guide)
+
 - [Supported URL Types](#supported-url-types)
-- [Download Options](#download-options)
-- [Troubleshooting](#troubleshooting)
+
+- [Overview](#overview)- [Download Options](#download-options)
+
+- [Quick Start](#quick-start)- [Troubleshooting](#troubleshooting)
+
+- [Running the Application](#running-the-application)- [Best Practices](#best-practices)
+
+- [User Interface Guide](#user-interface-guide)- [FAQ](#faq)
+
+- [Supported URLs](#supported-urls)
+
+- [Download Options](#download-options)## Overview
+
+- [Groq Transcription Setup](#groq-transcription-setup)
+
+- [Troubleshooting](#troubleshooting)The insta-downloader-gui is a professional-grade tool designed to download media content from Instagram efficiently. Built with PyQt6, it provides an intuitive desktop interface for:
+
 - [Best Practices](#best-practices)
-- [FAQ](#faq)
 
-## Overview
+- [FAQ](#faq)- **Media Extraction**: Download videos, thumbnails, and captions from Instagram.
 
-The insta-downloader-gui is a professional-grade tool designed to download media content from Instagram efficiently. Built with PyQt6, it provides an intuitive desktop interface for:
-
-- **Media Extraction**: Download videos, thumbnails, and captions from Instagram.
 - **Batch Processing**: Download multiple files simultaneously with progress tracking.
-- **Audio Extraction**: Extract and save audio from videos.
+
+## Overview- **Audio Extraction**: Extract and save audio from videos.
+
 - **Transcription**: Transcribe audio to text using OpenAI's Whisper model.
-- **Flexible Output**: Save files in organized, timestamped folders.
+
+The Instagram Downloader is a **web-based application** built with Streamlit for downloading Instagram media with AI-powered transcription.- **Flexible Output**: Save files in organized, timestamped folders.
+
 - **Dual Download Engines**: Uses both `instaloader` and `yt-dlp` for maximum reliability.
 
-## Quick Start
+### Key Capabilities
 
-### Prerequisites
+- **Web Interface**: Browser-based, no desktop app needed## Quick Start
 
-- Python 3.7 or higher
+- **Preview Mode**: Zero local storage option
+
+- **Groq AI**: Fast Hinglish transcription### Prerequisites
+
+- **Batch Processing**: Multiple URLs at once
+
+- **Cloud Deployment**: Deploy anywhere- Python 3.7 or higher
+
 - Internet connection
+
+## Quick Start
 
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/uikraft-hub/insta-downloader-gui.git
 
-# Navigate to the project directory
+# 1. Install```bash
+
+pip install -r requirements_streamlit.txt# Clone the repository
+
+git clone https://github.com/dhruvagrawal27/insta-downloader-gui.git
+
+# 2. Run
+
+streamlit run streamlit_preview_app.py# Navigate to the project directory
+
 cd insta-downloader-gui
 
-# Install required dependencies
-pip install -r requirements.txt
+# 3. Use
+
+# - Open browser (auto-opens)# Install required dependencies
+
+# - Paste Instagram URLpip install -r requirements.txt
+
+# - Click Preview/Download```
+
 ```
 
 ## Running the Application
 
+## Running the Application
+
 ```bash
-python src/main.py
+
+### Three Modes Availablepython src/main.py
+
 ```
 
-The application will launch, and you can start downloading media.
+#### 1. Preview Mode (Recommended)
+
+```bashThe application will launch, and you can start downloading media.
+
+streamlit run streamlit_preview_app.py
+
+```## User Interface Guide
+
+- ✅ No local storage
+
+- ✅ Preview before download### Main Interface Components
+
+- ✅ Individual file downloads
+
+#### 1. URL Input Section
+
+#### 2. Single URL Mode- **URL Input Field**: Enter any valid Instagram URL.
+
+```bash- **Add to Queue Button**: Add the URL to the download queue.
+
+streamlit run streamlit_app.py
+
+```#### 2. Download Options
+
+- ✅ One URL at a time- **Downloader Selection**: Choose between `instaloader` and `yt-dlp`.
+
+- ✅ Auto ZIP package- **Content Selection**: Checkboxes to select what to download (video, thumbnail, audio, caption, transcribe).
+
+
+
+#### 3. Batch Mode#### 3. Queue and Progress
+
+```bash- **Queue List**: Shows the list of URLs to be downloaded.
+
+streamlit run streamlit_batch_app.py- **Progress Bar**: Displays the overall download progress.
+
+```- **Progress Label**: Shows the status of the current download.
+
+- ✅ Multiple URLs
+
+- ✅ Progress tracking#### 4. Action Buttons
+
+- **Start Download**: Begins the download process for all items in the queue.
+
+See **[STREAMLIT_README.md](../STREAMLIT_README.md)** for mode comparison.- **Clear Queue**: Clears the download queue.
+
+- **Open Folder**: Opens the folder where downloaded files are saved.
 
 ## User Interface Guide
 
-### Main Interface Components
-
-#### 1. URL Input Section
-- **URL Input Field**: Enter any valid Instagram URL.
-- **Add to Queue Button**: Add the URL to the download queue.
-
-#### 2. Download Options
-- **Downloader Selection**: Choose between `instaloader` and `yt-dlp`.
-- **Content Selection**: Checkboxes to select what to download (video, thumbnail, audio, caption, transcribe).
-
-#### 3. Queue and Progress
-- **Queue List**: Shows the list of URLs to be downloaded.
-- **Progress Bar**: Displays the overall download progress.
-- **Progress Label**: Shows the status of the current download.
-
-#### 4. Action Buttons
-- **Start Download**: Begins the download process for all items in the queue.
-- **Clear Queue**: Clears the download queue.
-- **Open Folder**: Opens the folder where downloaded files are saved.
-
 #### 5. Results and Logs
-- **Results Tab**: Displays the details of completed downloads.
-- **Log Tab**: Shows detailed logs of the download process.
 
-## Supported URL Types
+### Sidebar Configuration- **Results Tab**: Displays the details of completed downloads.
 
-### Instagram Post URLs
-```
-https://www.instagram.com/p/Cxyz123.../
-```
+- **Downloader**: yt-dlp (recommended) or Instaloader- **Log Tab**: Shows detailed logs of the download process.
 
-### Instagram Reel URLs
-```
-https://www.instagram.com/reel/Cxyz123.../
-```
+- **Content**: Video, Thumbnail, Audio, Caption, Transcribe
 
-### Instagram Story URLs
-(Requires login, not yet supported in the GUI)
+- **Groq Settings**: API key, Hinglish processing## Supported URL Types
 
-## Download Options
 
-### Content Selection
-- **Video**: Download the video file (.mp4).
-- **Thumbnail**: Download the post/reel thumbnail (.jpg).
-- **Audio**: Extract and save the audio from the video (.mp3).
-- **Caption**: Save the post/reel caption as a text file (.txt).
-- **Transcribe**: Transcribe the audio to text using the Whisper model.
 
-### Downloader Engine
-- **Instaloader**: A popular and powerful Instagram scraping library.
-- **yt-dlp**: A versatile video downloader that also supports Instagram.
-The application will automatically fall back to the other downloader if the selected one fails.
+### Main Area### Instagram Post URLs
 
-## Troubleshooting
+- **URL Input**: Paste Instagram URL```
 
-### Common Issues and Solutions
+- **Actions**: Preview or Downloadhttps://www.instagram.com/p/Cxyz123.../
 
-#### "Invalid URL"
+- **Results**: Preview/download area```
+
+
+
+### Preview Section (Preview Mode)### Instagram Reel URLs
+
+- Thumbnail preview```
+
+- Video playerhttps://www.instagram.com/reel/Cxyz123.../
+
+- Audio player```
+
+- Caption display
+
+- Transcript display### Instagram Story URLs
+
+- Individual download buttons(Requires login, not yet supported in the GUI)
+
+
+
+## Supported URLs## Download Options
+
+
+
+### ✅ Works### Content Selection
+
+```- **Video**: Download the video file (.mp4).
+
+https://www.instagram.com/reel/ABC123/- **Thumbnail**: Download the post/reel thumbnail (.jpg).
+
+https://www.instagram.com/p/ABC123/- **Audio**: Extract and save the audio from the video (.mp3).
+
+https://instagr.am/p/ABC123/- **Caption**: Save the post/reel caption as a text file (.txt).
+
+```- **Transcribe**: Transcribe the audio to text using the Whisper model.
+
+
+
+### ❌ Doesn't Work### Downloader Engine
+
+- Stories (24-hour expiration)- **Instaloader**: A popular and powerful Instagram scraping library.
+
+- Private accounts- **yt-dlp**: A versatile video downloader that also supports Instagram.
+
+- IGTV (deprecated)The application will automatically fall back to the other downloader if the selected one fails.
+
+
+
+## Download Options## Troubleshooting
+
+
+
+### Content Types### Common Issues and Solutions
+
+- **Video** (MP4): Main content
+
+- **Thumbnail** (JPG): Cover image#### "Invalid URL"
+
+- **Audio** (MP3): Extracted audio**Possible Causes:**
+
+- **Caption** (TXT): Post description- The URL is not a valid Instagram URL.
+
+- **Transcription** (TXT): AI-generated text- The URL is for a private account or post.
+
+
+
+### Downloaders**Solutions:**
+
+- **yt-dlp**: More reliable (recommended)1. Verify the URL is a public Instagram post or reel.
+
+- **Instaloader**: Instagram-specific features2. Copy the URL directly from Instagram.
+
+
+
+## Groq Transcription Setup#### Download Failures
+
 **Possible Causes:**
-- The URL is not a valid Instagram URL.
-- The URL is for a private account or post.
+
+### 1. Get API Key- Network interruption.
+
+- Visit [console.groq.com](https://console.groq.com)- Instagram's anti-scraping measures.
+
+- Sign up (free)- The post has been deleted.
+
+- Create API key
 
 **Solutions:**
-1. Verify the URL is a public Instagram post or reel.
-2. Copy the URL directly from Instagram.
 
-#### Download Failures
-**Possible Causes:**
-- Network interruption.
-- Instagram's anti-scraping measures.
-- The post has been deleted.
+### 2. Configure1. Check your internet connection.
 
-**Solutions:**
-1. Check your internet connection.
-2. Try the other downloader engine.
-3. Wait a few minutes and try again.
+```bash2. Try the other downloader engine.
+
+# Create .env file3. Wait a few minutes and try again.
+
+GROQ_API_KEY=gsk_your_key_here
+
+```## Best Practices
+
+
+
+### 3. Use### Ethical Usage
+
+- Enable "Transcribe" in sidebar- Respect Instagram's Terms of Service.
+
+- Toggle "Hinglish Processing" (recommended)- Only download content you have permission to use.
+
+- Download as usual- Consider copyright and intellectual property rights.
+
+- Don't overload Instagram's servers with excessive requests.
+
+See **[GROQ_TRANSCRIPTION_README.md](../GROQ_TRANSCRIPTION_README.md)** for details.
+
+### Performance Optimization
+
+## Troubleshooting- Start with a small batch of URLs to test.
+
+- If one downloader fails, try the other.
+
+### Invalid URL
+
+- Check URL format## FAQ
+
+- Ensure public post
+
+- Remove tracking parameters### General Questions
+
+
+
+### Download Fails**Q: Is this application free to use?**
+
+- Switch downloaderA: Yes, this is an open-source project under the MIT license.
+
+- Wait and retry
+
+- Check internet**Q: Do I need an Instagram account?**
+
+A: For public posts, no. For private posts or stories, you would need to be logged in, which is not yet supported by the GUI.
+
+### 403 Forbidden
+
+- Use **yt-dlp** downloader**Q: Can I download from private Instagram accounts?**
+
+- Clear cacheA: No, only publicly accessible content can be downloaded.
+
+- Try different network
+
+### Technical Questions
+
+### Transcription Error
+
+- Verify API key**Q: Why is my download slow?**
+
+- Check rate limits (30/min)A: Download speed depends on your internet connection and the size of the media files.
+
+- Ensure video has audio
+
+**Q: Where are downloaded files saved?**
+
+### Memory Issues (Batch)A: Files are saved in a `downloads` folder within the application's directory, organized into timestamped session folders.
+
+- Reduce concurrent downloads
+- Use single URL mode
+- Process smaller batches
 
 ## Best Practices
 
 ### Ethical Usage
-- Respect Instagram's Terms of Service.
-- Only download content you have permission to use.
-- Consider copyright and intellectual property rights.
-- Don't overload Instagram's servers with excessive requests.
+- ✅ Respect Terms of Service
+- ✅ Only public content
+- ✅ Get permission
+- ✅ Credit creators
 
-### Performance Optimization
-- Start with a small batch of URLs to test.
-- If one downloader fails, try the other.
+### Performance
+- Disable transcription for speed
+- Use yt-dlp downloader
+- Limit batch size (10-20 URLs)
+- Preview mode for testing
+
+### Storage
+- Preview mode: Download before closing
+- Other modes: Files in `downloads/`
+- Clean up old sessions
+- Monitor disk space
 
 ## FAQ
 
-### General Questions
+**Q: Is it free?**
+A: Yes, MIT license.
 
-**Q: Is this application free to use?**
-A: Yes, this is an open-source project under the MIT license.
+**Q: Need Instagram account?**
+A: No for public content.
 
-**Q: Do I need an Instagram account?**
-A: For public posts, no. For private posts or stories, you would need to be logged in, which is not yet supported by the GUI.
+**Q: Works on mobile?**
+A: Yes, but desktop recommended.
 
-**Q: Can I download from private Instagram accounts?**
-A: No, only publicly accessible content can be downloaded.
+**Q: Download private posts?**
+A: No, only public content.
 
-### Technical Questions
+**Q: Where are files saved?**
+A: Preview = memory, Others = `downloads/` folder.
 
-**Q: Why is my download slow?**
-A: Download speed depends on your internet connection and the size of the media files.
+**Q: Transcription cost?**
+A: Free tier: 30 requests/minute.
 
-**Q: Where are downloaded files saved?**
-A: Files are saved in a `downloads` folder within the application's directory, organized into timestamped session folders.
+**Q: Hinglish accuracy?**
+A: Very accurate with LLM post-processing.
+
+**Q: Deploy online?**
+A: Yes, Streamlit Cloud/Heroku/Docker supported.
+
+---
+
+**More Help**: [GitHub Issues](https://github.com/dhruvagrawal27/insta-downloader-gui/issues)
+
+**Related Guides**:
+- [Main README](README.md)
+- [Preview Mode](../PREVIEW_MODE_README.md)
+- [Streamlit Apps](../STREAMLIT_README.md)
+- [Groq Setup](../QUICK_START_GROQ.md)
+- [Technical Docs](../IMPLEMENTATION_SUMMARY.md)

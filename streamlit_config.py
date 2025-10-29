@@ -17,8 +17,8 @@ def configure_streamlit():
         layout="wide",
         initial_sidebar_state="expanded",
         menu_items={
-            'Get Help': 'https://github.com/uikraft-hub/insta-downloader-gui',
-            'Report a bug': 'https://github.com/uikraft-hub/insta-downloader-gui/issues',
+            'Get Help': 'https://github.com/dhruvagrawal27/insta-downloader-gui',
+            'Report a bug': 'https://github.com/dhruvagrawal27/insta-downloader-gui/issues',
             'About': """
             # Instagram Media Downloader
             
@@ -61,7 +61,7 @@ def load_app_config():
     return {
         "app_name": "Instagram Media Downloader",
         "version": "1.0.0",
-        "author": "ukr",
+        "author": "Dhruv Agrawal",
         "supported_formats": ["mp4", "jpg", "mp3", "txt"],
         "max_file_size": "500MB",
         "supported_platforms": ["Instagram Reels", "Instagram Posts"]

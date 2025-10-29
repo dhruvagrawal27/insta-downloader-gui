@@ -1,54 +1,185 @@
-<h1>
-  <img src="../assets/insta-downloader-gui-logo.ico" alt="Project Logo" width="25" height="25" style="vertical-align: middle;">
-  insta-downloader-gui
-</h1>
+# Instagram Media Downloader - Web Application
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
 [![Status: Active](https://img.shields.io/badge/Status-Active-brightgreen.svg)](STATUS.md)
-[![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-red.svg)](CHANGELOG.md)
+[![Version: 2.0.0](https://img.shields.io/badge/Version-2.0.0-red.svg)](CHANGELOG.md)
 ![Language: Python](https://img.shields.io/badge/Language-Python-blue)
+![Framework: Streamlit](https://img.shields.io/badge/Framework-Streamlit-FF4B4B)
 
 <div align="center">
-  <img src="../assets/insta-downloader-gui-banner.jpg" alt="Project Banner" width="100%">
-</div>
-
-<div align="center">
-  <img src="https://readme-typing-svg.demolab.com/?lines=Instagram+media+downloader+that+actually+works&font=Fira%20Code&pause=1000&color=F75C7E&center=true&vCenter=true&width=1000&height=30&cursor=true">
-</div>
-
----
-## 🖼 Screenshot
-
-<div align="center">
-  <img src="../assets/screenshots/screenshot.png" alt="GUI Interface" />
-  <p><em>GUI Interface</em></p>
+  <img src="https://readme-typing-svg.demolab.com/?lines=Instagram+Downloader+Web+App;Groq+AI+Transcription;Preview+Mode+%7C+No+Local+Storage;Hinglish+Support+Built-in&font=Fira%20Code&pause=1000&color=F75C7E&center=true&vCenter=true&width=1000&height=30&cursor=true">
 </div>
 
 ---
 
-## ✨ What’s New in v1.0.0
+## 🎯 What's This?
 
-- 🎉 **Initial release** with core download and UI functionality  
-- **Dual Download Engines**: Now powered by both `instaloader` and `yt-dlp`.
-- **User-Selectable Downloader**: Choose your preferred download engine from the UI.
-- **Automatic Fallback**: If one downloader fails, the app automatically switches to the other to ensure success.
-- **Enhanced Reliability**: Improved download success rates for a wider range of Reels.
+A **modern web application** for downloading Instagram media with **AI-powered Hinglish transcription**. No desktop installation required - runs in your browser with zero local storage!
+
+### 🌟 Key Features
+
+- 🌐 **Web-Based**: Access from any browser, no .exe installation
+- 🎤 **Groq AI Transcription**: Fast, accurate Hinglish transcription with Roman script
+- 👁️ **Preview Mode**: See all content before downloading (no local storage)
+- 🔄 **Dual Downloaders**: Automatic fallback between Instaloader and yt-dlp
+- 📦 **Batch Processing**: Download multiple URLs simultaneously
+- 🚀 **Cloud-Ready**: Deploy to Streamlit Cloud, Heroku, Docker, etc.
 
 ---
 
-## 🛠️ All Features
+## ✨ What's New in v2.0.0
 
-- **Dual Download Engines**: Choose between `instaloader` and `yt-dlp`.
-- **Automatic Fallback**: Seamlessly switches engines on failure.
-- **Automatic yt-dlp Updates**: Checks for and installs the latest version of yt-dlp.
-- **Audio Transcription**: Transcribe Reel audio to text using the included OpenAI Whisper model (base.pt) with support for multilingual transcription.
-- Download Instagram Reels as `.mp4`.
-- Extract and save thumbnails as `.jpg`.
-- Save captions as `.txt`.
-- Extract audio tracks as `.mp3`.
-- Session-based folders timestamped on download.
-- Batch queue management with progress bar.
-- Lightweight & responsive PyQt6 GUI (Windows/macOS/Linux).
+### 🌐 Complete Web App Transformation
+- ✅ **Streamlit Web Interface**: Replaced desktop app with modern web UI
+- ✅ **Preview Mode**: View content before downloading (no local storage)
+- ✅ **Three App Modes**: Preview, Single URL, and Batch processing
+- ✅ **Cloud Deployment Ready**: Deploy to Streamlit Cloud, Heroku, Docker
+
+### 🎤 Groq AI Integration
+- ✅ **Groq Whisper API**: 10x faster transcription than local models
+- ✅ **Hinglish Support**: Native Roman script transcription
+- ✅ **LLM Post-Processing**: AI-powered spelling correction
+- ✅ **Multi-Model Fallback**: Automatic model switching
+
+### 🚀 Enhanced Features
+- ✅ **Zero Local Storage**: Preview mode keeps everything in memory
+- ✅ **Individual File Downloads**: Download each file separately
+- ✅ **Better Instagram Compatibility**: yt-dlp default for reliable downloads
+- ✅ **Environment Configuration**: Auto-load API keys from .env file
+
+---
+
+## 📚 Documentation Index
+
+### 🚀 Quick Start Guides
+- **[Getting Started](#-quick-start)** - Installation and first run
+- **[Quick Start: Groq](../QUICK_START_GROQ.md)** - Set up AI transcription in 5 minutes
+- **[Usage Guide](USAGE.md)** - Comprehensive usage instructions
+
+### 📖 Feature Documentation
+- **[Preview Mode](../PREVIEW_MODE_README.md)** - No local storage mode explained
+- **[Streamlit Apps](../STREAMLIT_README.md)** - All three app modes compared
+- **[Groq Transcription](../GROQ_TRANSCRIPTION_README.md)** - AI transcription setup
+- **[Complete Groq Guide](../GROQ_COMPLETE_GUIDE.md)** - Advanced Groq features
+
+### 🔧 Development Resources
+- **[Implementation Summary](../IMPLEMENTATION_SUMMARY.md)** - Technical architecture overview
+- **[Demo Script](../DEMO_SCRIPT.md)** - Testing and demonstration guide
+- **[Contributing](CONTRIBUTING.md)** - How to contribute to this project
+- **[Changelog](CHANGELOG.md)** - Version history and release notes
+
+### 📋 Project Information
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community guidelines
+- **[Security Policy](SECURITY.md)** - Security and vulnerability reporting
+- **[Project Status](STATUS.md)** - Current development status
+
+---
+
+## 🛠️ Core Features
+
+### 🌐 Web Application Modes
+
+#### 1. **Preview Mode** (Recommended)
+- 👁️ Preview all content before downloading
+- 💾 Zero local storage - everything in memory
+- 📥 Download files individually or as ZIP
+- 🎨 Modern, clean interface
+```bash
+streamlit run streamlit_preview_app.py
+```
+
+#### 2. **Single URL Mode**
+- 🎯 One URL at a time
+- 📦 Automatic ZIP package
+- 💽 Local file saving
+```bash
+streamlit run streamlit_app.py
+```
+
+#### 3. **Batch Mode**
+- 📋 Multiple URLs simultaneously
+- 📊 Progress tracking per URL
+- 📦 Bulk ZIP download
+```bash
+streamlit run streamlit_batch_app.py
+```
+
+### 🎤 AI Transcription Features
+
+- **Groq Whisper API**: Fast, accurate transcription (whisper-large-v3-turbo)
+- **Hinglish Support**: Proper Roman script for Hindi/Hinglish content
+- **LLM Post-Processing**: Context-aware spelling correction using Llama models
+- **Multi-Language**: English, Hindi, Hinglish, and 90+ languages
+- **Cost-Effective**: Free tier with 30 requests/minute
+
+### 📥 Download Options
+
+- 📹 **Video**: High-quality MP4 downloads
+- 🖼️ **Thumbnail**: JPG cover images and previews
+- 🎵 **Audio**: MP3 extraction from videos
+- 📝 **Caption**: Text captions and descriptions
+- 🎤 **Transcription**: AI-generated transcripts with Hinglish support
+
+### 🔄 Download Engines
+
+- **yt-dlp**: Default downloader, most reliable for Instagram
+- **Instaloader**: Fallback with Instagram-specific features
+- **Automatic Switching**: Seamless fallback on failure
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Python**: 3.8 or higher
+- **Internet**: Active connection
+- **Groq API Key**: Free from [console.groq.com](https://console.groq.com) (for transcription)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/dhruvagrawal27/insta-downloader-gui.git
+cd insta-downloader-gui
+
+# Install dependencies
+pip install -r requirements_streamlit.txt
+
+# (Optional) Set up Groq API key for transcription
+# Create .env file with: GROQ_API_KEY=gsk_your_key_here
+```
+
+### Running the App
+
+#### Windows Users (Easy Start)
+```bash
+# Double-click to run
+run_preview.bat
+```
+
+#### Manual Start (All Platforms)
+```bash
+# Preview Mode (Recommended)
+streamlit run streamlit_preview_app.py
+
+# Single URL Mode
+streamlit run streamlit_app.py
+
+# Batch Mode
+streamlit run streamlit_batch_app.py
+```
+
+### First Download
+
+1. **Open** the web interface (automatically opens in browser)
+2. **Configure** download options in the sidebar
+   - Choose downloader (yt-dlp recommended)
+   - Select what to download (video, audio, caption, etc.)
+   - Enable transcription (optional, requires Groq API key)
+3. **Paste** an Instagram URL
+4. **Click** "Start Download" or "Preview"
+5. **Download** your files!
 
 ---
 
@@ -56,180 +187,174 @@
 
 ```
 insta-downloader-gui/
-├── .gitattributes
-├── .github/
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── bug_report.md
-│   │   └── feature_request.md
-│   ├── PULL_REQUEST_TEMPLATE.md
-│   ├── RELEASE_TEMPLATE.md
-│   └── workflows/
-│       └── ci.yml
-├── .gitignore
-├── assets/
-│   ├── insta-downloader-gui-logo.ico
-│   └── screenshots/
-│       └── screenshot.png
-├── docs/
-│   ├── CHANGELOG.md
-│   ├── CODE_OF_CONDUCT.md
-│   ├── CONTRIBUTING.md
-│   ├── README.md
-│   ├── SECURITY.md
-│   ├── STATUS.md
-│   └── USAGE.md
-├── LICENSE
-├── pyproject.toml
-├── requirements.txt
-├── src/
-│   ├── __init__.py
-│   ├── agents/
-│   │   ├── instaloader.py
-│   │   └── yt_dlp.py
-│   ├── bin/
-│   │   ├── ffmpeg.exe
-│   │   └── yt-dlp.exe
-│   ├── build.bat
-│   ├── core/
-│   │   ├── __init__.py
-│   │   ├── data_models.py
-│   │   ├── downloader.py
-│   │   ├── session_manager.py
-│   │   ├── settings_manager.py
-│   │   └── transcriber.py
-│   ├── favicon.ico
-│   ├── main.py
-│   ├── resources/
-│   │   ├── __init__.py
-│   │   └── splash.py
-│   ├── ui/
-│   │   ├── __init__.py
-│   │   ├── components.py
-│   │   ├── dependency_downloader.py
-│   │   ├── main_window.py
-│   │   ├── panel_builder.py
-│   │   ├── progress_dialog.py
-│   │   └── styles.py
-│   ├── updater.py
-│   ├── utils/
-│   │   ├── __init__.py
-│   │   ├── bin_checker.py
-│   │   ├── lazy_imports.py
-│   │   ├── resource_loader.py
-│   │   └── url_validator.py
-│   └── whisper/
-│       ├── assets/
-│       │   ├── gpt2.tiktoken
-│       │   ├── mel_filters.npz
-│       │   └── multilingual.tiktoken
-│       └── base.pt
-└── tests/
-    ├── __init__.py
-    ├── test_downloader.py
-    ├── test_session_manager.py
-    ├── test_settings_manager.py
-    └── test_url_validator.py
-
+├── .env                          # API keys (create this)
+├── .env.example                  # API key template
+├── requirements_streamlit.txt    # Web app dependencies
+├── streamlit_preview_app.py      # Preview mode (no storage)
+├── streamlit_app.py              # Single URL mode
+├── streamlit_batch_app.py        # Batch mode
+├── streamlit_config.py           # App configuration
+├── run_preview.bat               # Windows launcher
+│
+├── docs/                         # Documentation
+│   ├── README.md                 # This file
+│   ├── USAGE.md                  # Usage guide
+│   ├── CHANGELOG.md              # Version history
+│   ├── CONTRIBUTING.md           # Contribution guide
+│   ├── SECURITY.md               # Security policy
+│   ├── CODE_OF_CONDUCT.md        # Community guidelines
+│   └── STATUS.md                 # Project status
+│
+├── QUICK_START_GROQ.md           # Groq setup guide
+├── GROQ_TRANSCRIPTION_README.md  # Transcription details
+├── GROQ_COMPLETE_GUIDE.md        # Advanced Groq guide
+├── PREVIEW_MODE_README.md        # Preview mode details
+├── STREAMLIT_README.md           # Streamlit apps guide
+├── IMPLEMENTATION_SUMMARY.md     # Technical overview
+├── DEMO_SCRIPT.md                # Demo/testing guide
+│
+├── src/                          # Source code
+│   ├── core/                     # Core functionality
+│   │   ├── downloader.py         # Download logic
+│   │   ├── groq_transcriber.py   # Groq AI transcription
+│   │   ├── transcriber.py        # Local Whisper (legacy)
+│   │   └── session_manager.py    # Session handling
+│   ├── agents/                   # Download engines
+│   │   ├── instaloader.py        # Instaloader agent
+│   │   └── yt_dlp.py             # yt-dlp agent
+│   └── utils/                    # Utilities
+│       ├── url_validator.py      # URL validation
+│       └── resource_loader.py    # Resource management
+│
+└── tests/                        # Test files
+    ├── test_groq_transcription.py
+    └── verify_env_setup.py
 ```
+
+---
+
+## 📊 Feature Comparison
+
+| Feature | Preview Mode | Single URL | Batch Mode |
+|---------|-------------|------------|------------|
+| **Local Storage** | ❌ No | ✅ Yes | ✅ Yes |
+| **Content Preview** | ✅ Full | ❌ No | ❌ No |
+| **Individual Downloads** | ✅ Yes | ❌ No | ❌ No |
+| **Multiple URLs** | ❌ No | ❌ No | ✅ Yes |
+| **Memory Usage** | 🟡 Medium | 🟢 Low | 🔴 High |
+| **Best For** | Testing | Single use | Bulk downloads |
 
 ---
 
 ## 🕹 Usage
 
-### Prerequisites
+For detailed usage instructions, see **[USAGE.md](USAGE.md)**
 
-- GitHub
+### Basic Workflow
 
-### Installation
+1. **Choose Mode**: Preview (recommended), Single URL, or Batch
+2. **Configure Options**: Select downloader and content types
+3. **Add URL(s)**: Paste Instagram URL(s)
+4. **Process**: Click download or preview button
+5. **Download**: Get your files!
 
-```bash
-# Clone the repository
-git clone https://github.com/uikraft-hub/insta-downloader-gui.git
-```
+### Supported URLs
 
-For more detailed documentation, see our [USAGE.md](USAGE.md)
+- ✅ Instagram Reels: `https://www.instagram.com/reel/ABC123/`
+- ✅ Instagram Posts: `https://www.instagram.com/p/ABC123/`
+- ✅ Short URLs: `https://instagr.am/p/ABC123/`
+- ❌ Stories: Not supported (24-hour expiration)
+- ❌ Private Accounts: Not accessible
 
 ---
 
 ## 🤝 Contributing
 
-Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines.
 
----
+### Ways to Contribute
 
-### Code of Conduct
-
-This project follows our [Code of Conduct](CODE_OF_CONDUCT.md). Please read it before contributing.
+- 🐛 Report bugs
+- 💡 Suggest features
+- 📝 Improve documentation
+- 🔧 Submit pull requests
+- ⭐ Star the repository
 
 ---
 
 ## 📋 Roadmap
 
-- [x] Lightweight & responsive
-- [x] Initial release
-- [x] Dual Download Engines
+- [x] Web-based interface
+- [x] Preview mode (no local storage)
+- [x] Groq AI transcription
+- [x] Hinglish support
+- [x] Batch processing
+- [ ] User authentication
+- [ ] Download history
+- [ ] Playlist support
+- [ ] Mobile-optimized UI
+- [ ] Docker containerization
 
-See the [open issues](https://github.com/uikraft-hub/insta-downloader-gui/issues) for a full list of proposed features and known issues.
+See **[open issues](https://github.com/dhruvagrawal27/insta-downloader-gui/issues)** for more.
 
 ---
 
 ## 📝 Changelog
 
-All notable changes to this project are documented in [CHANGELOG.md](CHANGELOG.md).
+All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
+
+### Latest (v2.0.0)
+- 🌐 Streamlit web interface
+- 🎤 Groq AI transcription
+- 👁️ Preview mode
+- 📦 Batch processing
+- 🚀 Cloud deployment ready
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+This project is licensed under the **MIT License** - see the **[LICENSE](../LICENSE)** file for details.
 
 ---
 
-
 ## 🙏 Acknowledgments
 
-* [Instaloader](https://github.com/instaloader/instaloader) for seamless media downloading
-* [yt-dlp](https://github.com/yt-dlp/yt-dlp) for robust video downloading
-* [MoviePy](https://github.com/Zulko/moviepy) for audio/video processing
-* [PyQt6](https://pypi.org/project/PyQt6/) for the GUI framework
+* **[Streamlit](https://streamlit.io/)** - Web framework
+* **[Groq](https://groq.com/)** - AI transcription infrastructure
+* **[Instaloader](https://github.com/instaloader/instaloader)** - Instagram downloading
+* **[yt-dlp](https://github.com/yt-dlp/yt-dlp)** - Video downloading
+* **[MoviePy](https://github.com/Zulko/moviepy)** - Audio/video processing
 
 ---
 
 ## 📞 Support
 
-- 📧 Email: ujjwalkrai@gmail.com
-- 🐛 Issues: [Repo Issues](https://github.com/uikraft-hub/insta-downloader-gui/issues)
-- 🔓 Security: [Repo Security](https://github.com/uikraft-hub/insta-downloader-gui/security)
-- ⛏ Pull Request: [Repo Pull Request](https://github.com/uikraft-hub/insta-downloader-gui/pulls)
-- 📖 Docs: [Repo Documentation](https://github.com/uikraft-hub/insta-downloader-gui/tree/main/docs)
-- 📃 Changelog: [Repo Changelog](https://github.com/uikraft-hub/insta-downloader-gui/blob/main/docs/CHANGELOG.md)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/dhruvagrawal27/insta-downloader-gui/issues)
+- 🔓 **Security**: [Security Policy](SECURITY.md)
+- ⛏ **Pull Requests**: [GitHub PRs](https://github.com/dhruvagrawal27/insta-downloader-gui/pulls)
+- 📖 **Docs**: [Documentation](https://github.com/dhruvagrawal27/insta-downloader-gui/tree/main/docs)
+
 ---
 
 ## 🔗 Connect
 
-#### 📝 Writing & Blogging
-[![Hashnode](https://img.shields.io/badge/Hashnode-2962FF?style=for-the-badge&logo=hashnode&logoColor=white)](https://ukr-projects.hashnode.dev/)
-[![Medium](https://img.shields.io/badge/Medium-12100E?style=for-the-badge&logo=medium&logoColor=white)](https://medium.com/@ukrpurojekuto)
-
-#### 💼 Professional
-[![Website](https://img.shields.io/badge/Website-000000?style=for-the-badge&logo=About.me&logoColor=white)](https://ukr-projects.github.io/ukr-projects/)
-[![ukr-projects](https://img.shields.io/badge/main-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ukr-projects)
-[![cyberx-projects](https://img.shields.io/badge/cybersecurity-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/cyberx-projects)
-[![contro-projects](https://img.shields.io/badge/frontend-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/contro-projects)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/u-k-r/ )
-[![Main Channel](https://img.shields.io/badge/main-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@ujjwal-krai)
-
-#### 🌐 Social
-[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://x.com/ukr_projects)
-[![Instagram](https://img.shields.io/badge/Instagram-E4405F?style=for-the-badge&logo=instagram&logoColor=white)](https://www.instagram.com/ukr_projects)
-[![Tech Channel](https://img.shields.io/badge/tech-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://www.youtube.com/@ukr-projects)
-[![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/ukr_projects)
-[![Reddit](https://img.shields.io/badge/Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white)](https://www.reddit.com/user/mrujjwalkr)
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/dhruvagrawal27)
 
 ---
 
 <div align="center">
-  Made with ❤️ by <a href="https://github.com/ukr-projects">ukr</a>
+  Made with ❤️ by <a href="https://github.com/dhruvagrawal27">Dhruv Agrawal</a>
 </div>
 
 ---
+
+## ⚖️ Disclaimer
+
+This tool is for **educational purposes** only. Please respect:
+- Instagram's Terms of Service
+- Content creators' rights
+- Copyright laws
+- Privacy settings
+
+Always obtain permission before downloading content that doesn't belong to you.

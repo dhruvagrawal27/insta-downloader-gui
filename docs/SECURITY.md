@@ -18,7 +18,6 @@ We take security vulnerabilities seriously and appreciate your efforts to respon
 
 Instead, please report security vulnerabilities to us in one of the following ways:
 
-- **Email**: ujjwalkrai@gmail.com
 - **GitHub Security Advisory**: Use the "Report a vulnerability" button in the Security tab of this repository
 
 ### What to Include
@@ -80,9 +79,6 @@ Currently, we do not offer a formal bug bounty program, but we deeply appreciate
 - Vulnerabilities in third-party dependencies (please report to the respective maintainers)
 - Issues that require user interaction with malicious content
 - Rate limiting issues without demonstrable impact
-
-## Security Contacts
-- **Security Team**: ujjwalkrai@gmail.com
 
 ## Security Resources
 - [OWASP Security Guidelines](https://owasp.org/www-project-top-ten/)
