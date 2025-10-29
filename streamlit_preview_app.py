@@ -22,6 +22,24 @@ import warnings
 warnings.filterwarnings("ignore", category=SyntaxWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
+# Load environment variables from .env file
+def load_env_file():
+    """Load environment variables from .env file."""
+    env_file = Path(__file__).parent / ".env"
+    if env_file.exists():
+        with open(env_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+                    if key and value and not value.startswith("gsk_your"):
+                        os.environ[key] = value
+
+# Load .env on startup
+load_env_file()
+
 # Import your existing core functionality
 from src.core.data_models import ReelItem
 from src.core.session_manager import SessionManager
@@ -29,15 +47,30 @@ from src.utils.url_validator import is_valid_instagram_url
 from src.agents import instaloader as instaloader_agent
 from src.agents import yt_dlp as yt_dlp_agent
 from src.core.transcriber import AudioTranscriber
+from src.core.groq_transcriber import GroqTranscriber
 from src.utils.lazy_imports import lazy_import_instaloader
 
 
 class PreviewDownloader:
     """Streamlit-compatible downloader with preview functionality."""
     
-    def __init__(self):
+    def __init__(self, groq_api_key: str = None, use_groq: bool = True):
         self.session_manager = SessionManager()
-        self.audio_transcriber = AudioTranscriber()
+        self.use_groq = use_groq
+        
+        # Initialize appropriate transcriber
+        if use_groq and groq_api_key:
+            try:
+                self.audio_transcriber = GroqTranscriber(api_key=groq_api_key)
+                self.transcriber_type = "groq"
+            except Exception as e:
+                st.warning(f"Failed to initialize Groq transcriber: {e}. Falling back to Whisper.")
+                self.audio_transcriber = AudioTranscriber()
+                self.transcriber_type = "whisper"
+        else:
+            self.audio_transcriber = AudioTranscriber()
+            self.transcriber_type = "whisper"
+        
         self.loader = None
         
     def setup_instaloader(self):
@@ -124,12 +157,25 @@ class PreviewDownloader:
             if progress_callback:
                 progress_callback("Transcribing audio...")
             try:
-                self.audio_transcriber.load_whisper_model()
                 reel_folder = Path(result["folder_path"])
-                self.audio_transcriber.transcribe_audio_from_reel(
-                    reel_folder, 1, result, 
-                    lambda url, progress, status: progress_callback(status) if progress_callback else None
-                )
+                
+                # Use Groq transcriber if available, otherwise fallback to Whisper
+                if self.transcriber_type == "groq":
+                    if progress_callback:
+                        progress_callback("Using Groq for Hinglish transcription...")
+                    self.audio_transcriber.transcribe_audio_from_reel(
+                        reel_folder, 1, result, 
+                        lambda url, progress, status: progress_callback(status) if progress_callback else None,
+                        enable_post_processing=options.get("enable_hinglish_processing", True)
+                    )
+                else:
+                    if progress_callback:
+                        progress_callback("Using local Whisper model...")
+                    self.audio_transcriber.load_whisper_model()
+                    self.audio_transcriber.transcribe_audio_from_reel(
+                        reel_folder, 1, result, 
+                        lambda url, progress, status: progress_callback(status) if progress_callback else None
+                    )
             except Exception as e:
                 result["transcript_error"] = str(e)
         
@@ -216,7 +262,59 @@ def render_sidebar():
     transcribe = st.sidebar.checkbox("🎤 Transcribe Audio", value=False, 
                                    help="Generate transcript using AI (takes longer)")
     
+    # Transcription settings
+    use_groq = False
+    groq_api_key = os.getenv("GROQ_API_KEY")  # Load from .env automatically
+    enable_hinglish_processing = True
+    
     if transcribe:
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🎤 Transcription Settings")
+        
+        # Check if API key is available
+        if groq_api_key:
+            transcription_engine = st.sidebar.radio(
+                "Transcription Engine",
+                ["Groq (Hinglish Support)", "Local Whisper"],
+                help="Groq provides better Hinglish support with Roman script output"
+            )
+            
+            use_groq = transcription_engine == "Groq (Hinglish Support)"
+            
+            if use_groq:
+                # Show API key status (masked)
+                masked_key = groq_api_key[:8] + "..." + groq_api_key[-4:]
+                st.sidebar.success(f"✅ Using Groq API key from .env")
+                st.sidebar.caption(f"Key: {masked_key}")
+                
+                enable_hinglish_processing = st.sidebar.checkbox(
+                    "📝 Enable Hinglish Processing",
+                    value=True,
+                    help="Post-process transcription with LLM for proper Hinglish in Roman script"
+                )
+                
+                if enable_hinglish_processing:
+                    st.sidebar.info("""
+                    **Hinglish Mode:**
+                    - Hindi/Hinglish → Roman script
+                    - English → Clean English
+                    - Spelling correction
+                    - Context-aware fixes
+                    """)
+            else:
+                st.sidebar.info("Using local Whisper model (no Hinglish post-processing)")
+        else:
+            st.sidebar.warning("⚠️ No Groq API key found in .env file")
+            st.sidebar.info("""
+            **To enable Groq transcription:**
+            1. Add to `.env` file:
+               `GROQ_API_KEY=gsk_your_key`
+            2. Restart the app
+            3. Get free key at: console.groq.com
+            """)
+            # Force local Whisper if no API key
+            use_groq = False
+        
         st.sidebar.warning("⚠️ Transcription requires additional processing time.")
     
     # Tips
@@ -224,6 +322,7 @@ def render_sidebar():
     st.sidebar.subheader("💡 Tips")
     st.sidebar.info("""
     • **yt-dlp** is recommended for Instagram
+    • **Groq** for Hinglish transcription
     • **No files saved locally** - everything in memory
     • **Download individual files** from preview
     • **Private accounts** may not work
@@ -235,7 +334,10 @@ def render_sidebar():
         "thumbnail": thumbnail,
         "audio": audio,
         "caption": caption,
-        "transcribe": transcribe
+        "transcribe": transcribe,
+        "use_groq": use_groq,
+        "groq_api_key": groq_api_key,
+        "enable_hinglish_processing": enable_hinglish_processing
     }
 
 
@@ -460,8 +562,14 @@ def main():
         status_text = st.empty()
         
         try:
-            # Initialize downloader
-            downloader = PreviewDownloader()
+            # Initialize downloader with Groq support if enabled and API key available
+            if options.get("transcribe") and options.get("use_groq") and options.get("groq_api_key"):
+                downloader = PreviewDownloader(
+                    groq_api_key=options.get("groq_api_key"),
+                    use_groq=True
+                )
+            else:
+                downloader = PreviewDownloader(use_groq=False)
             
             # Progress callback
             def update_progress(message):
