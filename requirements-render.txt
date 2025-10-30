@@ -1,0 +1,13 @@
+# Minimal production dependencies for Render deployment
+# Uses pre-compiled wheels to avoid Rust/compilation issues
+
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+groq
+instaloader
+requests
+beautifulsoup4
+python-multipart
+httpx
