@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: insta-downloader-api
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements-production.txt
+    startCommand: uvicorn api_server:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 300
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_WHISPER_MODEL
+        value: whisper-large-v3-turbo
+      - key: GROQ_PRIMARY_LLM
+        value: llama-3.3-70b-versatile
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /health

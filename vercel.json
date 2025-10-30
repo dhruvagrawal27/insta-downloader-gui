@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api_server.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "api_server.py"
+    }
+  ],
+  "env": {
+    "GROQ_API_KEY": "@groq_api_key",
+    "GROQ_WHISPER_MODEL": "whisper-large-v3-turbo",
+    "GROQ_PRIMARY_LLM": "llama-3.3-70b-versatile"
+  }
+}
