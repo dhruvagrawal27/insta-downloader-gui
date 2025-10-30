@@ -89,7 +89,7 @@ class GroqTranscriber:
         """
         if progress_callback:
             progress_callback("", 10, "Uploading audio to Groq Whisper...")
-        
+
         try:
             with open(audio_path, "rb") as audio_file:
                 # Use Groq's Whisper API for transcription
@@ -208,7 +208,7 @@ Return ONLY the cleaned transcription text without any additional commentary or 
                 
             except Exception as e:
                 error_msg = f"LLM post-processing with {model_name} failed: {str(e)}"
-                print(error_msg)
+                print(f"Warning: {error_msg}")
                 if model_name == self.llm_models[-1]:  # Last model
                     # If all models fail, return original transcription
                     if progress_callback:
@@ -301,6 +301,7 @@ Return ONLY the cleaned transcription text without any additional commentary or 
             if progress_callback:
                 progress_callback("", 0, error_msg)
             return
+
         
         try:
             # Run transcription pipeline
