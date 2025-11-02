@@ -55,7 +55,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",  # React dev server
         "http://localhost:5173",  # Vite dev server
-        "https://*.vercel.app",   # Vercel deployments
+        "https://*.vercel.app",   # All Vercel deployments
+        "https://instagram-downloader.vercel.app",  # Your production frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],

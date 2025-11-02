@@ -6,7 +6,11 @@ uvicorn[standard]
 python-dotenv
 pydantic
 groq
+yt-dlp
 instaloader
+moviepy
+numpy<2.0.0
+Pillow
 requests
 beautifulsoup4
 python-multipart

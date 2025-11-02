@@ -1,0 +1,10 @@
+{
+  "url": "https://www.instagram.com/p/DNzggMxXt3g/",
+  "video": true,
+  "thumbnail": true,
+  "audio": true,
+  "caption": true,
+  "transcribe": false,
+  "enable_hinglish": false,
+  "downloader": "yt-dlp"
+}

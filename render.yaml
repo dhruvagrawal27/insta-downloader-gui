@@ -4,7 +4,7 @@ services:
     env: python
     region: oregon
     plan: free
-    buildCommand: pip install -r requirements-production.txt
+    buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
     startCommand: uvicorn api_server:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 300
     envVars:
       - key: GROQ_API_KEY

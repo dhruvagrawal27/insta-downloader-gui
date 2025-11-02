@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 import urllib.request
 import zipfile
 import shutil
@@ -13,6 +14,16 @@ def is_frozen():
     return getattr(sys, "frozen", False)
 
 
+def is_linux():
+    """Check if running on Linux"""
+    return platform.system() == "Linux"
+
+
+def is_windows():
+    """Check if running on Windows"""
+    return platform.system() == "Windows"
+
+
 def get_bin_dir():
     """Get the path to the bin directory based on execution context"""
     if is_frozen():
@@ -21,6 +32,28 @@ def get_bin_dir():
     else:
         # In development, use the src/bin directory
         return os.path.join(os.path.dirname(__file__), "..", "bin")
+
+
+def get_yt_dlp_command():
+    """Get the appropriate yt-dlp command for the current platform"""
+    if is_linux():
+        # On Linux, use system yt-dlp
+        return "yt-dlp"
+    else:
+        # On Windows, use local binary
+        bin_dir = get_bin_dir()
+        return os.path.join(bin_dir, "yt-dlp.exe")
+
+
+def get_ffmpeg_command():
+    """Get the appropriate ffmpeg command for the current platform"""
+    if is_linux():
+        # On Linux, use system ffmpeg
+        return "ffmpeg"
+    else:
+        # On Windows, use local binary
+        bin_dir = get_bin_dir()
+        return os.path.join(bin_dir, "ffmpeg.exe")
 
 
 def download_yt_dlp(progress_callback=None):

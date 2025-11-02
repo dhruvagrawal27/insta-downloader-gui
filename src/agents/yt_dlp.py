@@ -9,7 +9,15 @@ from pathlib import Path
 from typing import Dict, Any, Union
 
 from src.utils.lazy_imports import lazy_import_requests, lazy_import_moviepy
-from src.utils.bin_checker import ensure_yt_dlp, ensure_ffmpeg, get_bin_dir, is_frozen
+from src.utils.bin_checker import (
+    ensure_yt_dlp, 
+    ensure_ffmpeg, 
+    get_bin_dir, 
+    is_frozen,
+    is_linux,
+    get_yt_dlp_command,
+    get_ffmpeg_command
+)
 from src.core.data_models import ReelItem
 from src.utils.resource_loader import get_resource_path
 
@@ -40,22 +48,31 @@ def download_reel(
     reel_folder.mkdir(exist_ok=True)
     result["folder_path"] = str(reel_folder)
 
-    # Ensure yt-dlp is available in frozen state
-    if not ensure_yt_dlp():
-        raise FileNotFoundError(
-            "Failed to download yt-dlp.exe. Please check your internet connection."
-        )
-
-    bin_dir = get_bin_dir()
-    yt_dlp_path = Path(bin_dir) / "yt-dlp.exe"
-    if not yt_dlp_path.exists():
-        raise FileNotFoundError(f"yt-dlp.exe not found at {yt_dlp_path}")
+    # Ensure yt-dlp is available (only needed on Windows frozen state)
+    if is_frozen() and not is_linux():
+        if not ensure_yt_dlp():
+            raise FileNotFoundError(
+                "Failed to download yt-dlp.exe. Please check your internet connection."
+            )
+    
+    # Get platform-appropriate yt-dlp command
+    yt_dlp_cmd = get_yt_dlp_command()
+    
+    # On Linux, verify yt-dlp is installed
+    if is_linux():
+        try:
+            subprocess.run([yt_dlp_cmd, "--version"], 
+                         capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            raise FileNotFoundError(
+                "yt-dlp not found. Please install it: pip install yt-dlp"
+            )
 
     progress_callback(item.url, 10, "Downloading with yt-dlp...")
 
     video_path = reel_folder / f"video{reel_number}.mp4"
     cmd = [
-        str(yt_dlp_path),
+        yt_dlp_cmd,
         item.url,
         "-o",
         str(video_path),
@@ -72,7 +89,7 @@ def download_reel(
     subprocess.run(cmd, check=True, startupinfo=startupinfo)
     result["video_path"] = str(video_path)
 
-    info_cmd = [str(yt_dlp_path), item.url, "--dump-json", "--quiet"]
+    info_cmd = [yt_dlp_cmd, item.url, "--dump-json", "--quiet"]
     process = subprocess.run(
         info_cmd, capture_output=True, text=True, check=True, startupinfo=startupinfo
     )
