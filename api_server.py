@@ -121,14 +121,19 @@ class APIDownloader:
     def setup_instaloader(self):
         """Initialize Instaloader instance."""
         if self.loader is None:
-            instaloader_module = lazy_import_instaloader()
-            self.loader = instaloader_module.Instaloader(
-                download_video_thumbnails=True,
-                download_comments=False,
-                save_metadata=False,
-                compress_json=False,
-                dirname_pattern=str(self.session_manager.get_session_folder()),
-            )
+            try:
+                instaloader_module = lazy_import_instaloader()
+                self.loader = instaloader_module.Instaloader(
+                    download_video_thumbnails=True,
+                    download_comments=False,
+                    save_metadata=False,
+                    compress_json=False,
+                    dirname_pattern=str(self.session_manager.get_session_folder()),
+                )
+                print("[INFO] Instaloader initialized successfully")
+            except Exception as e:
+                print(f"[ERROR] Failed to initialize Instaloader: {str(e)}")
+                raise Exception(f"Instaloader initialization failed: {str(e)}")
     
     def file_to_base64(self, file_path: Path) -> str:
         """Convert file to base64 string."""
@@ -167,18 +172,19 @@ class APIDownloader:
                 options["video"] = True
                 options["_temp_video"] = True  # Mark as temporary, delete after audio extraction
             
-            if options.get("downloader", "yt-dlp") == "Instaloader":
-                self.setup_instaloader()
-            
             reel_item = ReelItem(url=url)
             
             # Prefer yt-dlp as it's more reliable and doesn't need login
             # Only use Instaloader if explicitly requested
             preferred_downloader = options.get("downloader", "yt-dlp").strip()
             
+            # Initialize Instaloader if needed (case-insensitive check)
+            if preferred_downloader.lower() == "instaloader":
+                self.setup_instaloader()
+            
             # Attempt download with primary downloader
             try:
-                if preferred_downloader == "Instaloader":
+                if preferred_downloader.lower() == "instaloader":
                     result = instaloader_agent.download_reel(
                         reel_item, 1, self.session_manager.get_session_folder(),
                         self.loader, options, lambda url, progress, status: None
@@ -193,7 +199,7 @@ class APIDownloader:
                 print(f"[ERROR] Primary downloader failed: {str(e)}")
                 # Try fallback downloader
                 try:
-                    if preferred_downloader == "Instaloader":
+                    if preferred_downloader.lower() == "instaloader":
                         print("[INFO] Falling back to yt-dlp...")
                         result = yt_dlp_agent.download_reel(
                             reel_item, 1, self.session_manager.get_session_folder(),
