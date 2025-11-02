@@ -73,7 +73,12 @@ def download_reel(
         progress_callback(item.url, 100, "Completed")
 
     except Exception as e:
-        raise Exception(f"Instaloader download error: {str(e)}")
+        error_msg = str(e)
+        if "rate-limit" in error_msg.lower() or "401" in error_msg or "403" in error_msg:
+            raise Exception(
+                "Instagram rate limit reached. Please wait a few minutes and try again, or use yt-dlp downloader instead."
+            )
+        raise Exception(f"Instaloader download error: {error_msg}")
 
     finally:
         if temp_video_path and os.path.exists(str(temp_video_path)):

@@ -71,13 +71,18 @@ def download_reel(
     progress_callback(item.url, 10, "Downloading with yt-dlp...")
 
     video_path = reel_folder / f"video{reel_number}.mp4"
+    
+    # Build command with better error handling and user-agent
     cmd = [
         yt_dlp_cmd,
         item.url,
         "-o",
         str(video_path),
+        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "--quiet",
         "--no-warnings",
+        "--retries", "3",
+        "--fragment-retries", "3",
     ]
 
     startupinfo = None
@@ -86,8 +91,16 @@ def download_reel(
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
         startupinfo.wShowWindow = 0
 
-    subprocess.run(cmd, check=True, startupinfo=startupinfo)
-    result["video_path"] = str(video_path)
+    try:
+        subprocess.run(cmd, check=True, startupinfo=startupinfo, capture_output=True, text=True)
+        result["video_path"] = str(video_path)
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr if e.stderr else str(e)
+        if "rate-limit" in error_msg.lower() or "403" in error_msg or "401" in error_msg:
+            raise Exception(
+                "Instagram rate limit reached. Please try again in a few minutes or use a different downloader."
+            )
+        raise Exception(f"yt-dlp download failed: {error_msg}")
 
     info_cmd = [yt_dlp_cmd, item.url, "--dump-json", "--quiet"]
     process = subprocess.run(

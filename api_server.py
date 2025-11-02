@@ -160,35 +160,56 @@ class APIDownloader:
             # Setup session folder
             self.session_manager.setup_session_folder()
             
+            # Force video download if audio or transcribe is requested
+            # (audio extraction requires video file)
+            need_video_for_audio = options.get("audio", False) or options.get("transcribe", False)
+            if need_video_for_audio and not options.get("video", False):
+                options["video"] = True
+                options["_temp_video"] = True  # Mark as temporary, delete after audio extraction
+            
             if options.get("downloader", "yt-dlp") == "Instaloader":
                 self.setup_instaloader()
             
             reel_item = ReelItem(url=url)
             
+            # Prefer yt-dlp as it's more reliable and doesn't need login
+            # Only use Instaloader if explicitly requested
+            preferred_downloader = options.get("downloader", "yt-dlp").strip()
+            
             # Attempt download with primary downloader
             try:
-                if options.get("downloader", "yt-dlp") == "Instaloader":
+                if preferred_downloader == "Instaloader":
                     result = instaloader_agent.download_reel(
                         reel_item, 1, self.session_manager.get_session_folder(),
                         self.loader, options, lambda url, progress, status: None
                     )
                 else:
+                    # Default to yt-dlp (more reliable, no login needed)
                     result = yt_dlp_agent.download_reel(
                         reel_item, 1, self.session_manager.get_session_folder(),
                         options, lambda url, progress, status: None
                     )
             except Exception as e:
+                print(f"[ERROR] Primary downloader failed: {str(e)}")
                 # Try fallback downloader
-                if options.get("downloader", "yt-dlp") == "Instaloader":
-                    result = yt_dlp_agent.download_reel(
-                        reel_item, 1, self.session_manager.get_session_folder(),
-                        options, lambda url, progress, status: None
-                    )
-                else:
-                    self.setup_instaloader()
-                    result = instaloader_agent.download_reel(
-                        reel_item, 1, self.session_manager.get_session_folder(),
-                        self.loader, options, lambda url, progress, status: None
+                try:
+                    if preferred_downloader == "Instaloader":
+                        print("[INFO] Falling back to yt-dlp...")
+                        result = yt_dlp_agent.download_reel(
+                            reel_item, 1, self.session_manager.get_session_folder(),
+                            options, lambda url, progress, status: None
+                        )
+                    else:
+                        print("[INFO] Falling back to Instaloader...")
+                        self.setup_instaloader()
+                        result = instaloader_agent.download_reel(
+                            reel_item, 1, self.session_manager.get_session_folder(),
+                            self.loader, options, lambda url, progress, status: None
+                        )
+                except Exception as fallback_error:
+                    # Both downloaders failed
+                    raise Exception(
+                        f"Both downloaders failed. Primary: {str(e)}, Fallback: {str(fallback_error)}"
                     )
             
             # Handle transcription if enabled
@@ -225,7 +246,8 @@ class APIDownloader:
             # Convert files to base64 for API response
             files = []
             
-            if result.get('video_path') and options.get('video', True):
+            # Only include video if it was explicitly requested (not just for audio extraction)
+            if result.get('video_path') and options.get('video', True) and not options.get('_temp_video', False):
                 media_file = self.create_media_file(Path(result['video_path']), "video")
                 if media_file:
                     files.append(media_file)
