@@ -167,6 +167,7 @@ def _extract_audio(
         reel_folder / f"video{reel_number}.mp4"
     )
     if not os.path.exists(video_path):
+        print(f"[WARNING] Video file not found for audio extraction: {video_path}")
         return
     audio_path = reel_folder / f"audio{reel_number}.mp3"
     video_clip = None
@@ -178,9 +179,13 @@ def _extract_audio(
             audio_clip = video_clip.audio
             audio_clip.write_audiofile(str(audio_path), verbose=False, logger=None)
             result["audio_path"] = str(audio_path)
-    except Exception:
-        # Log the error if a proper logging mechanism is in place
-        pass
+            print(f"[SUCCESS] Audio extracted to: {audio_path}")
+        else:
+            print(f"[WARNING] Video has no audio track: {video_path}")
+    except Exception as e:
+        print(f"[ERROR] Audio extraction failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
     finally:
         _cleanup_video_resources(audio_clip, video_clip)
 
