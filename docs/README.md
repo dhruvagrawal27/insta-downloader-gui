@@ -20,6 +20,7 @@ A **modern web application** for downloading Instagram media with **AI-powered H
 
 - 🌐 **Web-Based**: Access from any browser, no .exe installation
 - 🎤 **Groq AI Transcription**: Fast, accurate Hinglish transcription with Roman script
+- 🎬 **AI Video Prompts**: Generate Sora 2/Veo 3 cinematic prompts from transcripts
 - 👁️ **Preview Mode**: See all content before downloading (no local storage)
 - 🔄 **Dual Downloaders**: Automatic fallback between Instaloader and yt-dlp
 - 📦 **Batch Processing**: Download multiple URLs simultaneously
@@ -27,7 +28,16 @@ A **modern web application** for downloading Instagram media with **AI-powered H
 
 ---
 
-## ✨ What's New in v2.0.0
+## ✨ What's New in v2.1.0
+
+### 🎬 AI Video Prompt Generation (NEW!)
+- ✅ **Sora 2 / Veo 3 Prompts**: Generate professional cinematic video prompts from transcripts
+- ✅ **Cameo Support**: Add up to 3 Instagram usernames for character integration
+- ✅ **Segment Breakdown**: Auto-splits scripts into 6-8 second optimized segments
+- ✅ **Complete Scene Details**: Camera, lighting, audio, characters, FX, and more
+- ✅ **Copy Individual Segments**: One-click JSON copy for each segment
+- ✅ **Production Notes**: Continuity guides, shooting tips, viral optimization
+- ✅ **Beautiful Visualization**: Expandable cards with formatted display
 
 ### 🌐 Complete Web App Transformation
 - ✅ **Streamlit Web Interface**: Replaced desktop app with modern web UI
@@ -38,7 +48,7 @@ A **modern web application** for downloading Instagram media with **AI-powered H
 ### 🎤 Groq AI Integration
 - ✅ **Groq Whisper API**: 10x faster transcription than local models
 - ✅ **Hinglish Support**: Native Roman script transcription
-- ✅ **LLM Post-Processing**: AI-powered spelling correction
+- ✅ **LLM Post-Processing**: AI-powered spelling correction using Llama 3.3
 - ✅ **Multi-Model Fallback**: Automatic model switching
 
 ### 🚀 Enhanced Features
@@ -112,6 +122,22 @@ streamlit run streamlit_batch_app.py
 - **Multi-Language**: English, Hindi, Hinglish, and 90+ languages
 - **Cost-Effective**: Free tier with 30 requests/minute
 
+### 🎬 AI Video Prompt Generation
+
+- **Sora 2 & Veo 3 Support**: Generate prompts for OpenAI Sora 2 or Google Veo 3
+- **Cameo Integration**: Add up to 3 Instagram usernames as characters
+- **Smart Segmentation**: Auto-splits scripts into 2-4 optimal segments (6-8s each)
+- **Cinematic Details**: Complete scene descriptions with:
+  - 📸 Camera specs (type, style, movement, quality)
+  - 💡 Lighting & environment (detailed atmosphere)
+  - 👥 Character actions (appearance, dialogue, motion, gestures)
+  - 🎵 Audio design (mix style, background sounds)
+  - ✨ Visual effects (FX requirements)
+  - 🎬 Transitions (end states and flow)
+- **Production Notes**: Continuity guides, shooting recommendations, viral optimization tips
+- **Copy Individual Segments**: One-click JSON copy for each segment with download option
+- **Beautiful Display**: Expandable cards with color-coded sections and formatted layout
+
 ### 📥 Download Options
 
 - 📹 **Video**: High-quality MP4 downloads
@@ -119,6 +145,7 @@ streamlit run streamlit_batch_app.py
 - 🎵 **Audio**: MP3 extraction from videos
 - 📝 **Caption**: Text captions and descriptions
 - 🎤 **Transcription**: AI-generated transcripts with Hinglish support
+- 🎬 **AI Video Prompts**: Sora 2/Veo 3 cinematic prompts (JSON + formatted display)
 
 ### 🔄 Download Engines
 
@@ -177,9 +204,16 @@ streamlit run streamlit_batch_app.py
    - Choose downloader (yt-dlp recommended)
    - Select what to download (video, audio, caption, etc.)
    - Enable transcription (optional, requires Groq API key)
+   - Enable AI video prompts (optional, requires transcription + Groq key)
+   - Select Sora 2 or Veo 3, add cameos if desired
 3. **Paste** an Instagram URL
-4. **Click** "Start Download" or "Preview"
-5. **Download** your files!
+4. **Click** "Preview Content" or "Start Download"
+5. **View Results**:
+   - Download individual files
+   - Read AI-generated transcript
+   - Copy segment JSON prompts
+   - Get complete production notes
+6. **Download** your files and prompts!
 
 ---
 
@@ -208,6 +242,9 @@ insta-downloader-gui/
 ├── QUICK_START_GROQ.md           # Groq setup guide
 ├── GROQ_TRANSCRIPTION_README.md  # Transcription details
 ├── GROQ_COMPLETE_GUIDE.md        # Advanced Groq guide
+├── AI_PROMPT_FEATURES.md         # Sora 2/Veo 3 prompt generation guide
+├── COPY_SEGMENT_FEATURE.md       # Segment JSON copy feature
+├── PROMPT_VISUALIZATION_GUIDE.md # Prompt display guide
 ├── PREVIEW_MODE_README.md        # Preview mode details
 ├── STREAMLIT_README.md           # Streamlit apps guide
 ├── IMPLEMENTATION_SUMMARY.md     # Technical overview
@@ -240,9 +277,11 @@ insta-downloader-gui/
 | **Local Storage** | ❌ No | ✅ Yes | ✅ Yes |
 | **Content Preview** | ✅ Full | ❌ No | ❌ No |
 | **Individual Downloads** | ✅ Yes | ❌ No | ❌ No |
+| **AI Video Prompts** | ✅ Yes | ❌ No | ❌ No |
+| **Segment Copy** | ✅ Yes | ❌ No | ❌ No |
 | **Multiple URLs** | ❌ No | ❌ No | ✅ Yes |
 | **Memory Usage** | 🟡 Medium | 🟢 Low | 🔴 High |
-| **Best For** | Testing | Single use | Bulk downloads |
+| **Best For** | Full features | Single use | Bulk downloads |
 
 ---
 
@@ -289,6 +328,12 @@ We welcome contributions! Please see **[CONTRIBUTING.md](CONTRIBUTING.md)** for 
 - [x] Groq AI transcription
 - [x] Hinglish support
 - [x] Batch processing
+- [x] Sora 2/Veo 3 AI video prompt generation
+- [x] Cameo integration for character prompts
+- [x] Individual segment JSON copy
+- [ ] Runway ML prompt generation
+- [ ] Pika Labs prompt support
+- [ ] Custom prompt templates
 - [ ] User authentication
 - [ ] Download history
 - [ ] Playlist support
@@ -303,7 +348,15 @@ See **[open issues](https://github.com/dhruvagrawal27/insta-downloader-gui/issue
 
 All notable changes are documented in **[CHANGELOG.md](CHANGELOG.md)**.
 
-### Latest (v2.0.0)
+### Latest (v2.1.0)
+- 🎬 Sora 2 / Veo 3 AI video prompt generation
+- 👥 Cameo support (up to 3 usernames)
+- 📋 Individual segment JSON copy
+- 🎨 Beautiful prompt visualization
+- 📝 Production notes & viral optimization
+- 🔄 Auto script segmentation (6-8s chunks)
+
+### Previous (v2.0.0)
 - 🌐 Streamlit web interface
 - 🎤 Groq AI transcription
 - 👁️ Preview mode
