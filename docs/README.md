@@ -21,6 +21,7 @@ A **modern web application** for downloading Instagram media with **AI-powered H
 - 🌐 **Web-Based**: Access from any browser, no .exe installation
 - 🎤 **Groq AI Transcription**: Fast, accurate Hinglish transcription with Roman script
 - 🎬 **AI Video Prompts**: Generate Sora 2/Veo 3 cinematic prompts from transcripts
+- 🍪 **Cookie Authentication**: Bypass Instagram rate limits with your session cookies
 - 👁️ **Preview Mode**: See all content before downloading (no local storage)
 - 🔄 **Dual Downloaders**: Automatic fallback between Instaloader and yt-dlp
 - 📦 **Batch Processing**: Download multiple URLs simultaneously
@@ -71,6 +72,7 @@ A **modern web application** for downloading Instagram media with **AI-powered H
 - **[Streamlit Apps](../STREAMLIT_README.md)** - All three app modes compared
 - **[Groq Transcription](../GROQ_TRANSCRIPTION_README.md)** - AI transcription setup
 - **[Complete Groq Guide](../GROQ_COMPLETE_GUIDE.md)** - Advanced Groq features
+- **[Cookie Authentication](COOKIE_AUTHENTICATION.md)** - Bypass rate limits with Instagram cookies
 
 ### 🔧 Development Resources
 - **[Implementation Summary](../IMPLEMENTATION_SUMMARY.md)** - Technical architecture overview
