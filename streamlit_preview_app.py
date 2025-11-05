@@ -275,6 +275,40 @@ def render_sidebar():
         st.sidebar.warning("⚠️ yt-dlp not available. Using Instaloader only.")
         downloader = "Instaloader"
     
+    # Authentication Section
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🔐 Authentication (Optional)")
+    
+    use_cookies = st.sidebar.checkbox(
+        "🍪 Use Instagram Cookies",
+        value=False,
+        help="Add cookies to bypass rate limits and access private content"
+    )
+    
+    cookies_text = None
+    if use_cookies:
+        st.sidebar.info("""
+        **How to get cookies:**
+        1. Install browser extension: "Get cookies.txt LOCALLY"
+        2. Login to Instagram
+        3. Click extension → Export cookies
+        4. Paste Netscape format below
+        """)
+        
+        cookies_text = st.sidebar.text_area(
+            "Paste cookies (Netscape format)",
+            height=100,
+            placeholder="# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t...",
+            help="Cookies in Netscape format from browser extension"
+        )
+        
+        if cookies_text and len(cookies_text.strip()) > 50:
+            st.sidebar.success("✅ Cookies loaded")
+        elif cookies_text:
+            st.sidebar.warning("⚠️ Cookies seem too short. Make sure you copied the full content.")
+        
+        st.sidebar.caption("🔒 Cookies are used only for this session and never stored.")
+    
     # Sora 2/Veo 3 Prompt Generation
     st.sidebar.markdown("---")
     st.sidebar.subheader("🎬 AI Video Prompts")
@@ -420,6 +454,7 @@ def render_sidebar():
     <ul>
     <li>✅ Use the desktop app instead (download from GitHub)</li>
     <li>✅ Run locally: <code>streamlit run streamlit_preview_app.py</code></li>
+    <li>✅ Add Instagram cookies (see Authentication section above)</li>
     <li>✅ Wait 10-15 minutes between requests</li>
     <li>✅ Try different URLs</li>
     </ul>
@@ -440,7 +475,8 @@ def render_sidebar():
         "enable_hinglish_processing": enable_hinglish_processing,
         "generate_prompts": generate_prompts,
         "prompt_type": prompt_type,
-        "cameo_usernames": cameo_usernames
+        "cameo_usernames": cameo_usernames,
+        "cookies_text": cookies_text if use_cookies else None
     }
 
 
@@ -1171,14 +1207,18 @@ def main():
     options = render_sidebar()
     
     # Important notice about rate limiting
-    st.info("""
-    ⚠️ **Important**: Instagram aggressively blocks cloud-hosted apps. If downloads fail:
-    - ✅ Download the **desktop version** from [GitHub Releases](https://github.com/dhruvagrawal27/insta-downloader-gui/releases)
-    - ✅ Run locally: `git clone` → `streamlit run streamlit_preview_app.py`
-    - ⏰ Wait 10-15 minutes if you see rate limit errors
-    
-    This is an Instagram API limitation, not an app issue.
-    """)
+    if options.get("cookies_text"):
+        st.success("🍪 **Authenticated Mode**: Using Instagram cookies for better reliability!")
+    else:
+        st.info("""
+        ⚠️ **Important**: Instagram aggressively blocks cloud-hosted apps. If downloads fail:
+        - 🍪 **Best Solution**: Add Instagram cookies in sidebar (bypasses rate limits!)
+        - ✅ Download the **desktop version** from [GitHub Releases](https://github.com/dhruvagrawal27/insta-downloader-gui/releases)
+        - ✅ Run locally: `git clone` → `streamlit run streamlit_preview_app.py`
+        - ⏰ Wait 10-15 minutes if you see rate limit errors
+        
+        This is an Instagram API limitation, not an app issue.
+        """)
     
     # Main content area
     st.subheader("🔗 Enter Instagram URL")
