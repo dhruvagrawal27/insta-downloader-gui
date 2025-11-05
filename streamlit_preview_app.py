@@ -45,7 +45,15 @@ from src.core.data_models import ReelItem
 from src.core.session_manager import SessionManager
 from src.utils.url_validator import is_valid_instagram_url
 from src.agents import instaloader as instaloader_agent
-from src.agents import yt_dlp as yt_dlp_agent
+
+# Try to import web-compatible yt-dlp first, fallback to executable version
+try:
+    from src.agents import yt_dlp_web as yt_dlp_agent
+    YT_DLP_WEB = True
+except ImportError:
+    from src.agents import yt_dlp as yt_dlp_agent
+    YT_DLP_WEB = False
+
 from src.core.transcriber import AudioTranscriber
 from src.core.groq_transcriber import GroqTranscriber
 from src.utils.lazy_imports import lazy_import_instaloader
@@ -247,12 +255,19 @@ def render_sidebar():
     """Render the sidebar with download options."""
     st.sidebar.header("⚙️ Preview Options")
     
+    # Check yt-dlp availability
+    yt_dlp_available = hasattr(yt_dlp_agent, 'check_availability') and yt_dlp_agent.check_availability()
+    
     # Downloader selection - Default to yt-dlp for better reliability
-    downloader = st.sidebar.selectbox(
-        "🔧 Preferred Downloader",
-        ["yt-dlp", "Instaloader"],
-        help="yt-dlp is more reliable for Instagram content. Instaloader may face API restrictions."
-    )
+    if yt_dlp_available:
+        downloader = st.sidebar.selectbox(
+            "🔧 Preferred Downloader",
+            ["yt-dlp", "Instaloader"],
+            help="yt-dlp is more reliable for Instagram content. Instaloader may face API restrictions."
+        )
+    else:
+        st.sidebar.warning("⚠️ yt-dlp not available. Using Instaloader only.")
+        downloader = "Instaloader"
     
     # Sora 2/Veo 3 Prompt Generation
     st.sidebar.markdown("---")
@@ -1228,16 +1243,50 @@ def main():
             error_msg = str(e)
             st.error(f"❌ Failed to load content: {error_msg}")
             
-            # Provide helpful suggestions
-            if "403" in error_msg or "Forbidden" in error_msg:
-                st.info("💡 **Suggestion:** Instagram may be blocking requests. Try:")
-                st.write("- Using yt-dlp instead of Instaloader")
-                st.write("- Waiting a few minutes before trying again")
-                st.write("- Using a different Instagram URL")
-            elif "Private" in error_msg:
-                st.info("💡 **Note:** This appears to be a private account. Only public content can be accessed.")
+            # Provide helpful suggestions based on error type
+            if "rate limit" in error_msg.lower() or "429" in error_msg:
+                st.warning("⏰ **Instagram Rate Limit Detected**")
+                st.info("""
+                **What happened:** Instagram is temporarily blocking too many requests.
+                
+                **Solutions:**
+                1. ✅ Wait 5-10 minutes before trying again
+                2. ✅ Try a different Instagram URL
+                3. ✅ Use a VPN or different network (if available)
+                4. ❌ Note: Both downloaders are affected by Instagram's rate limits
+                
+                **Why this happens:** Streamlit Cloud shares IP addresses, and Instagram may block high traffic.
+                """)
+            elif "403" in error_msg or "Forbidden" in error_msg or "401" in error_msg:
+                st.warning("🚫 **Access Denied by Instagram**")
+                st.info("""
+                **What happened:** Instagram blocked the request.
+                
+                **Possible reasons:**
+                - Content is from a private account
+                - Instagram detected automated access
+                - Geographic restrictions
+                - Content was deleted
+                
+                **Try:**
+                - Verify the URL is correct and public
+                - Wait a few minutes and try again
+                - Use a different content URL
+                """)
+            elif "not found" in error_msg.lower() or "yt-dlp" in error_msg.lower() and "install" in error_msg.lower():
+                st.warning("📦 **Package Installation Issue**")
+                st.info("""
+                **What happened:** yt-dlp is not properly installed.
+                
+                **For Streamlit Cloud:** The app should automatically install yt-dlp from requirements.txt.
+                If this error persists, please wait for the app to redeploy.
+                
+                **In the meantime:** Try using the Instaloader option in the sidebar.
+                """)
+            elif "Private" in error_msg or "login" in error_msg.lower():
+                st.info("� **Note:** This appears to be private/restricted content. Only public content can be accessed.")
             else:
-                st.info("💡 **Try:** Switch to a different downloader in the sidebar options.")
+                st.info("💡 **Try:** Switch to a different downloader in the sidebar options or wait a few minutes.")
     
     # Footer
     st.markdown("---")
