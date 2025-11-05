@@ -7,6 +7,7 @@ Users can preview media and download individual files as needed.
 
 import streamlit as st
 import os
+import sys
 import io
 import base64
 import tempfile
@@ -17,6 +18,11 @@ import threading
 import time
 from datetime import datetime
 import warnings
+
+# Add the project root to Python path for imports to work
+project_root = Path(__file__).parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 # Suppress warnings
 warnings.filterwarnings("ignore", category=SyntaxWarning)
