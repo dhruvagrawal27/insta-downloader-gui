@@ -53,7 +53,7 @@ def download_reel(
 
     video_path = reel_folder / f"video{reel_number}.mp4"
     
-    # yt-dlp options optimized for Instagram
+    # yt-dlp options optimized for Instagram with multiple fallback strategies
     ydl_opts = {
         'outtmpl': str(video_path),
         'quiet': True,
@@ -61,25 +61,37 @@ def download_reel(
         'format': 'best',
         # Instagram-specific options to bypass rate limiting
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': 'en-us,en;q=0.5',
             'Sec-Fetch-Mode': 'navigate',
+            'X-IG-App-ID': '936619743392459',  # Instagram web app ID
         },
         'extractor_args': {
             'instagram': {
-                'api_mode': 'embed',  # Use embed API to avoid rate limits
+                'api': 'web',  # Try web API first
             }
         },
         'socket_timeout': 30,
-        'retries': 3,
-        'fragment_retries': 3,
+        'retries': 5,  # More retries
+        'fragment_retries': 5,
+        'sleep_interval': 1,  # Sleep between requests
+        'max_sleep_interval': 3,
     }
     
-    # Add cookies if available (helps with private/restricted content)
-    cookies_file = Path.home() / '.yt-dlp' / 'cookies.txt'
-    if cookies_file.exists():
-        ydl_opts['cookiefile'] = str(cookies_file)
+    # Check for cookies from environment or file
+    cookies_from_options = download_options.get('cookies_text')
+    if cookies_from_options:
+        # Save temporary cookies file
+        temp_cookies = session_folder / 'temp_cookies.txt'
+        with open(temp_cookies, 'w') as f:
+            f.write(cookies_from_options)
+        ydl_opts['cookiefile'] = str(temp_cookies)
+    else:
+        # Try standard cookie locations
+        cookies_file = Path.home() / '.yt-dlp' / 'cookies.txt'
+        if cookies_file.exists():
+            ydl_opts['cookiefile'] = str(cookies_file)
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:

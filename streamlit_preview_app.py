@@ -393,9 +393,9 @@ def render_sidebar():
         
         st.sidebar.warning("⚠️ Transcription requires additional processing time.")
     
-    # Tips
+    # Tips and Limitations
     st.sidebar.markdown("---")
-    st.sidebar.subheader("💡 Tips")
+    st.sidebar.subheader("💡 Tips & Limitations")
     st.sidebar.info("""
     • **yt-dlp** is recommended for Instagram
     • **Groq** for Hinglish transcription
@@ -403,6 +403,24 @@ def render_sidebar():
     • **Download individual files** from preview
     • **Private accounts** may not work
     """)
+    
+    st.sidebar.warning("⚠️ **Known Issue**: Instagram Rate Limits")
+    st.sidebar.markdown("""
+    <details>
+    <summary style="cursor: pointer; font-weight: bold;">📖 Why downloads may fail?</summary>
+    <div style="margin-top: 10px; padding: 10px; background-color: #f0f0f0; border-radius: 5px;">
+    <p><strong>Instagram blocks cloud servers</strong> (like Streamlit Cloud) to prevent bots.</p>
+    <p><strong>Solutions:</strong></p>
+    <ul>
+    <li>✅ Use the desktop app instead (download from GitHub)</li>
+    <li>✅ Run locally: <code>streamlit run streamlit_preview_app.py</code></li>
+    <li>✅ Wait 10-15 minutes between requests</li>
+    <li>✅ Try different URLs</li>
+    </ul>
+    <p><strong>This is an Instagram limitation, not an app bug.</strong></p>
+    </div>
+    </details>
+    """, unsafe_allow_html=True)
     
     return {
         "downloader": downloader,
@@ -1145,6 +1163,16 @@ def main():
     
     # Get preview options from sidebar
     options = render_sidebar()
+    
+    # Important notice about rate limiting
+    st.info("""
+    ⚠️ **Important**: Instagram aggressively blocks cloud-hosted apps. If downloads fail:
+    - ✅ Download the **desktop version** from [GitHub Releases](https://github.com/dhruvagrawal27/insta-downloader-gui/releases)
+    - ✅ Run locally: `git clone` → `streamlit run streamlit_preview_app.py`
+    - ⏰ Wait 10-15 minutes if you see rate limit errors
+    
+    This is an Instagram API limitation, not an app issue.
+    """)
     
     # Main content area
     st.subheader("🔗 Enter Instagram URL")
