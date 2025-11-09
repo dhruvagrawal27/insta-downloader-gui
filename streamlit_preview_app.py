@@ -259,56 +259,69 @@ def render_header():
 
 def render_sidebar():
     """Render the sidebar with download options."""
-    st.sidebar.header("⚙️ Preview Options")
+    # Check which downloader method is selected (default to rapidapi)
+    current_method = st.session_state.get("downloader_method", "rapidapi")
     
-    # Check yt-dlp availability
-    yt_dlp_available = hasattr(yt_dlp_agent, 'check_availability') and yt_dlp_agent.check_availability()
-    
-    # Downloader selection - Default to yt-dlp for better reliability
-    if yt_dlp_available:
-        downloader = st.sidebar.selectbox(
-            "🔧 Preferred Downloader",
-            ["yt-dlp", "Instaloader"],
-            help="yt-dlp is more reliable for Instagram content. Instaloader may face API restrictions."
-        )
+    # Show different options based on downloader method
+    if current_method == "rapidapi":
+        # RapidAPI Downloader - Minimal options
+        st.sidebar.header("⚙️ RapidAPI Options")
+        st.sidebar.success("✅ No rate limits!")
+        st.sidebar.info("💡 RapidAPI bypasses Instagram restrictions - no authentication needed!")
+        
     else:
-        st.sidebar.warning("⚠️ yt-dlp not available. Using Instaloader only.")
-        downloader = "Instaloader"
-    
-    # Authentication Section
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔐 Authentication (Optional)")
-    
-    use_cookies = st.sidebar.checkbox(
-        "🍪 Use Instagram Cookies",
-        value=False,
-        help="Add cookies to bypass rate limits and access private content"
-    )
-    
-    cookies_text = None
-    if use_cookies:
-        st.sidebar.info("""
-        **How to get cookies:**
-        1. Install browser extension: "Get cookies.txt LOCALLY"
-        2. Login to Instagram
-        3. Click extension → Export cookies
-        4. Paste Netscape format below
-        """)
+        # Standard Downloaders - Full options
+        st.sidebar.header("⚙️ Preview Options")
         
-        cookies_text = st.sidebar.text_area(
-            "Paste cookies (Netscape format)",
-            height=100,
-            placeholder="# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t...",
-            help="Cookies in Netscape format from browser extension"
+        # Check yt-dlp availability
+        yt_dlp_available = hasattr(yt_dlp_agent, 'check_availability') and yt_dlp_agent.check_availability()
+        
+        # Downloader selection - Default to yt-dlp for better reliability
+        if yt_dlp_available:
+            downloader = st.sidebar.selectbox(
+                "🔧 Preferred Downloader",
+                ["yt-dlp", "Instaloader"],
+                help="yt-dlp is more reliable for Instagram content. Instaloader may face API restrictions."
+            )
+        else:
+            st.sidebar.warning("⚠️ yt-dlp not available. Using Instaloader only.")
+            downloader = "Instaloader"
+        
+        # Authentication Section
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🔐 Authentication (Optional)")
+        
+        use_cookies = st.sidebar.checkbox(
+            "🍪 Use Instagram Cookies",
+            value=False,
+            help="Add cookies to bypass rate limits and access private content"
         )
         
-        if cookies_text and len(cookies_text.strip()) > 50:
-            st.sidebar.success("✅ Cookies loaded")
-        elif cookies_text:
-            st.sidebar.warning("⚠️ Cookies seem too short. Make sure you copied the full content.")
-        
-        st.sidebar.caption("🔒 Cookies are used only for this session and never stored.")
+        cookies_text = None
+        if use_cookies:
+            st.sidebar.info("""
+            **How to get cookies:**
+            1. Install browser extension: "Get cookies.txt LOCALLY"
+            2. Login to Instagram
+            3. Click extension → Export cookies
+            4. Paste Netscape format below
+            """)
+            
+            cookies_text = st.sidebar.text_area(
+                "Paste cookies (Netscape format)",
+                height=100,
+                placeholder="# Netscape HTTP Cookie File\n.instagram.com\tTRUE\t/\tTRUE\t...",
+                help="Cookies in Netscape format from browser extension"
+            )
+            
+            if cookies_text and len(cookies_text.strip()) > 50:
+                st.sidebar.success("✅ Cookies loaded")
+            elif cookies_text:
+                st.sidebar.warning("⚠️ Cookies seem too short. Make sure you copied the full content.")
+            
+            st.sidebar.caption("🔒 Cookies are used only for this session and never stored.")
     
+    # Common options for both methods
     # Sora 2/Veo 3 Prompt Generation
     st.sidebar.markdown("---")
     st.sidebar.subheader("🎬 AI Video Prompts")
@@ -436,35 +449,46 @@ def render_sidebar():
     # Tips and Limitations
     st.sidebar.markdown("---")
     st.sidebar.subheader("💡 Tips & Limitations")
-    st.sidebar.info("""
+    
+    # Show different tips based on method
+    if current_method == "rapidapi":
+        st.sidebar.info("""
+    • **RapidAPI** bypasses Instagram restrictions
+    • **Groq** for Hinglish transcription
+    • **No files saved locally** - everything in memory
+    • **Download individual files** from preview
+    • **Works with public content**
+    """)
+    else:
+        st.sidebar.info("""
     • **yt-dlp** is recommended for Instagram
     • **Groq** for Hinglish transcription
     • **No files saved locally** - everything in memory
     • **Download individual files** from preview
     • **Private accounts** may not work
     """)
+        
+        st.sidebar.warning("⚠️ **Known Issue**: Instagram Rate Limits")
+        st.sidebar.markdown("""
+        <details>
+        <summary style="cursor: pointer; font-weight: bold;">📖 Why downloads may fail?</summary>
+        <div style="margin-top: 10px; padding: 10px; background-color: #f0f0f0; border-radius: 5px;">
+        <p><strong>Instagram blocks cloud servers</strong> (like Streamlit Cloud) to prevent bots.</p>
+        <p><strong>Solutions:</strong></p>
+        <ul>
+        <li>✅ Use RapidAPI downloader (button above)</li>
+        <li>✅ Add Instagram cookies (see Authentication section)</li>
+        <li>✅ Wait 10-15 minutes between requests</li>
+        <li>✅ Try different URLs</li>
+        <li>✅ Run locally: <code>streamlit run streamlit_preview_app.py</code></li>
+        </ul>
+        <p><strong>This is an Instagram limitation, not an app bug.</strong></p>
+        </div>
+        </details>
+        """, unsafe_allow_html=True)
     
-    st.sidebar.warning("⚠️ **Known Issue**: Instagram Rate Limits")
-    st.sidebar.markdown("""
-    <details>
-    <summary style="cursor: pointer; font-weight: bold;">📖 Why downloads may fail?</summary>
-    <div style="margin-top: 10px; padding: 10px; background-color: #f0f0f0; border-radius: 5px;">
-    <p><strong>Instagram blocks cloud servers</strong> (like Streamlit Cloud) to prevent bots.</p>
-    <p><strong>Solutions:</strong></p>
-    <ul>
-    <li>✅ Use the desktop app instead (download from GitHub)</li>
-    <li>✅ Run locally: <code>streamlit run streamlit_preview_app.py</code></li>
-    <li>✅ Add Instagram cookies (see Authentication section above)</li>
-    <li>✅ Wait 10-15 minutes between requests</li>
-    <li>✅ Try different URLs</li>
-    </ul>
-    <p><strong>This is an Instagram limitation, not an app bug.</strong></p>
-    </div>
-    </details>
-    """, unsafe_allow_html=True)
-    
-    return {
-        "downloader": downloader,
+    # Build return dict based on method
+    result = {
         "video": video,
         "thumbnail": thumbnail,
         "audio": audio,
@@ -475,9 +499,16 @@ def render_sidebar():
         "enable_hinglish_processing": enable_hinglish_processing,
         "generate_prompts": generate_prompts,
         "prompt_type": prompt_type,
-        "cameo_usernames": cameo_usernames,
-        "cookies_text": cookies_text if use_cookies else None
+        "cameo_usernames": cameo_usernames
     }
+    
+    # Add standard downloader specific options
+    if current_method == "standard":
+        result["downloader"] = downloader
+        result["use_cookies"] = use_cookies
+        result["cookies_text"] = cookies_text if use_cookies else None
+    
+    return result
 
 
 def create_download_zip(result: Dict[str, Any]) -> bytes:
