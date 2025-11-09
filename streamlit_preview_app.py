@@ -1206,6 +1206,273 @@ def main():
     # Get preview options from sidebar
     options = render_sidebar()
     
+    # Downloader method selection
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        use_rapidapi = st.button(
+            "🚀 Use RapidAPI Downloader (Recommended)",
+            use_container_width=True,
+            type="primary",
+            help="Fast, reliable downloads using RapidAPI - bypasses Instagram rate limits"
+        )
+    
+    with col2:
+        use_standard = st.button(
+            "🔧 Use Standard Downloaders",
+            use_container_width=True,
+            help="Traditional method using Instaloader/yt-dlp (may face rate limits)"
+        )
+    
+    # Store selection in session state
+    if use_rapidapi:
+        st.session_state.downloader_method = "rapidapi"
+    elif use_standard:
+        st.session_state.downloader_method = "standard"
+    
+    # Default to RapidAPI if not set
+    if "downloader_method" not in st.session_state:
+        st.session_state.downloader_method = "rapidapi"
+    
+    st.markdown("---")
+    
+    # Show appropriate interface based on selection
+    if st.session_state.downloader_method == "rapidapi":
+        handle_rapidapi_download(options)
+    else:
+        handle_standard_download(options)
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("""
+    <div style="text-align: center; color: gray; font-size: 0.8em;">
+        <p>Instagram Media Previewer | No Local Storage | Built with Streamlit</p>
+        <p>⚠️ Please respect content creators' rights and Instagram's terms of service</p>
+        <p>🔒 All content is processed in memory - nothing saved to disk</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def handle_rapidapi_download(options):
+    """Handle downloads using RapidAPI."""
+    st.subheader("🚀 RapidAPI Instagram Downloader")
+    st.info("✨ **Fast & Reliable**: This method uses RapidAPI to bypass Instagram rate limits!")
+    
+    # URL input
+    url_input = st.text_input(
+        label="Instagram Reel/Post URL",
+        placeholder="https://www.instagram.com/reel/... or https://www.instagram.com/p/...",
+        help="Enter Instagram reel or post URL",
+        key="rapidapi_url_input"
+    )
+    
+    # Download button
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        download_btn = st.button("📥 Download & Transcribe", use_container_width=True, type="primary", key="rapidapi_download_btn")
+    
+    if download_btn:
+        if not url_input.strip():
+            st.error("❌ Please enter an Instagram URL")
+            return
+        
+        # Validate Instagram URL
+        if not is_valid_instagram_url(url_input.strip()):
+            st.error("❌ Please enter a valid Instagram URL (must contain instagram.com)")
+            return
+        
+        # Process with RapidAPI
+        try:
+            import requests
+            from moviepy.editor import VideoFileClip
+            import tempfile
+            from pathlib import Path
+            
+            # Step 1: Fetch from RapidAPI
+            with st.spinner("🔍 Fetching content from Instagram..."):
+                api_url = "https://instagram-story-downloader-media-downloader.p.rapidapi.com/unified/url"
+                
+                headers = {
+                    "x-rapidapi-key": "0d7481b280mshcd4e4845f499b53p1ddf9djsnb259e8d623b6",
+                    "x-rapidapi-host": "instagram-story-downloader-media-downloader.p.rapidapi.com"
+                }
+                
+                response = requests.get(api_url, headers=headers, params={"url": url_input.strip()})
+                
+                if response.status_code != 200:
+                    st.error(f"❌ API Error: {response.status_code}")
+                    st.json(response.json() if response.text else {})
+                    return
+                
+                data = response.json()
+                
+                if not data.get("success"):
+                    st.error("❌ Failed to fetch content from Instagram")
+                    st.json(data)
+                    return
+            
+            st.success("✅ Content fetched successfully!")
+            
+            # Extract data
+            media_type = data.get("media_type", "unknown")
+            content = data.get("data", {}).get("content", {})
+            media_url = content.get("media_url")
+            thumbnail_url = content.get("thumbnail_url")
+            title = data.get("data", {}).get("title", "Instagram Media")
+            
+            # Step 2: Show thumbnail preview
+            st.subheader("👀 Preview")
+            col1, col2 = st.columns([1, 2])
+            
+            with col1:
+                if thumbnail_url:
+                    st.image(thumbnail_url, caption="Thumbnail Preview", use_container_width=True)
+                st.info(f"**Type**: {media_type.capitalize()}")
+                st.info(f"**Title**: {title}")
+            
+            with col2:
+                st.success("✅ Media URL obtained")
+                if media_type == "video":
+                    st.info("🎬 Video detected - will extract audio for transcription")
+            
+            # Step 3: Download video
+            if not media_url:
+                st.error("❌ No media URL found in response")
+                return
+            
+            with st.spinner("📥 Downloading media..."):
+                media_response = requests.get(media_url, timeout=60)
+                media_response.raise_for_status()
+                
+                # Save to temporary file
+                temp_dir = tempfile.mkdtemp()
+                video_path = Path(temp_dir) / "video.mp4"
+                
+                with open(video_path, "wb") as f:
+                    f.write(media_response.content)
+            
+            st.success(f"✅ Downloaded {len(media_response.content) / 1024 / 1024:.2f} MB")
+            
+            # Step 4: Extract audio if video
+            audio_path = None
+            if media_type == "video":
+                with st.spinner("🎵 Extracting audio..."):
+                    try:
+                        video_clip = VideoFileClip(str(video_path))
+                        if video_clip.audio is not None:
+                            audio_path = Path(temp_dir) / "audio.mp3"
+                            video_clip.audio.write_audiofile(str(audio_path), verbose=False, logger=None)
+                            video_clip.close()
+                            st.success("✅ Audio extracted successfully")
+                        else:
+                            st.warning("⚠️ No audio found in video")
+                            video_clip.close()
+                    except Exception as e:
+                        st.error(f"❌ Audio extraction failed: {str(e)}")
+            
+            # Step 5: Transcribe if audio exists and transcription enabled
+            transcript_text = None
+            if audio_path and options.get("transcribe", False):
+                with st.spinner("🎤 Transcribing audio with Groq (Hinglish)..."):
+                    try:
+                        # Check if Groq API key is available
+                        groq_api_key = options.get("groq_api_key") or os.getenv("GROQ_API_KEY")
+                        
+                        if not groq_api_key:
+                            st.error("❌ Groq API key not found. Please add it in .env file or sidebar.")
+                        else:
+                            from src.core.groq_transcriber import GroqTranscriber
+                            
+                            transcriber = GroqTranscriber(api_key=groq_api_key)
+                            
+                            # Read audio file
+                            with open(audio_path, "rb") as audio_file:
+                                # Transcribe using Groq
+                                result = transcriber.transcribe_audio(
+                                    audio_file,
+                                    enable_post_processing=options.get("enable_hinglish_processing", True)
+                                )
+                                
+                                transcript_text = result.get("transcript", "")
+                                
+                                if transcript_text:
+                                    st.success("✅ Transcription completed!")
+                                    
+                                    # Display transcript
+                                    st.subheader("📝 Hinglish Transcription")
+                                    st.text_area(
+                                        "Transcript",
+                                        value=transcript_text,
+                                        height=200,
+                                        key="rapidapi_transcript"
+                                    )
+                                    
+                                    # Download button for transcript
+                                    st.download_button(
+                                        label="💾 Download Transcript",
+                                        data=transcript_text,
+                                        file_name=f"transcript_{title.replace(' ', '_')}.txt",
+                                        mime="text/plain"
+                                    )
+                                else:
+                                    st.warning("⚠️ Transcription returned empty result")
+                    
+                    except Exception as e:
+                        st.error(f"❌ Transcription failed: {str(e)}")
+                        import traceback
+                        st.code(traceback.format_exc())
+            elif not options.get("transcribe", False):
+                st.info("💡 Enable transcription in the sidebar to get Hinglish transcript")
+            
+            # Step 6: Provide download options
+            st.subheader("📥 Downloads")
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.download_button(
+                    label="📹 Download Video",
+                    data=open(video_path, "rb").read(),
+                    file_name=f"{title.replace(' ', '_')}.mp4",
+                    mime="video/mp4"
+                )
+            
+            with col2:
+                if thumbnail_url:
+                    thumb_response = requests.get(thumbnail_url)
+                    st.download_button(
+                        label="🖼️ Download Thumbnail",
+                        data=thumb_response.content,
+                        file_name=f"{title.replace(' ', '_')}_thumb.jpg",
+                        mime="image/jpeg"
+                    )
+            
+            with col3:
+                if audio_path and audio_path.exists():
+                    st.download_button(
+                        label="🎵 Download Audio",
+                        data=open(audio_path, "rb").read(),
+                        file_name=f"{title.replace(' ', '_')}.mp3",
+                        mime="audio/mpeg"
+                    )
+            
+            # Cleanup
+            try:
+                import shutil
+                shutil.rmtree(temp_dir)
+            except:
+                pass
+        
+        except Exception as e:
+            st.error(f"❌ Error: {str(e)}")
+            import traceback
+            with st.expander("🔍 Error Details"):
+                st.code(traceback.format_exc())
+
+
+def handle_standard_download(options):
+    """Handle downloads using standard Instaloader/yt-dlp method."""
     # Important notice about rate limiting
     if options.get("cookies_text"):
         st.success("🍪 **Authenticated Mode**: Using Instagram cookies for better reliability!")
@@ -1228,13 +1495,14 @@ def main():
         label="Instagram URL",
         placeholder="https://www.instagram.com/reel/... or https://www.instagram.com/p/...",
         help="Supports Instagram Reels and Posts",
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="standard_url_input"
     )
     
     # Preview button
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        preview_btn = st.button("🔍 Preview Content", use_container_width=True, type="primary")
+        preview_btn = st.button("🔍 Preview Content", use_container_width=True, type="primary", key="standard_preview_btn")
     
     # Handle preview
     if preview_btn:
@@ -1327,7 +1595,7 @@ def main():
                 1. ✅ Wait 5-10 minutes before trying again
                 2. ✅ Try a different Instagram URL
                 3. ✅ Use a VPN or different network (if available)
-                4. ❌ Note: Both downloaders are affected by Instagram's rate limits
+                4. ✅ Try the RapidAPI downloader (click button above)
                 
                 **Why this happens:** Streamlit Cloud shares IP addresses, and Instagram may block high traffic.
                 """)
@@ -1343,25 +1611,21 @@ def main():
                 - Content was deleted
                 
                 **Try:**
+                - Use the RapidAPI downloader (more reliable)
                 - Verify the URL is correct and public
                 - Wait a few minutes and try again
-                - Use a different content URL
                 """)
             elif "not found" in error_msg.lower() or "yt-dlp" in error_msg.lower() and "install" in error_msg.lower():
                 st.warning("📦 **Package Installation Issue**")
                 st.info("""
                 **What happened:** yt-dlp is not properly installed.
                 
-                **For Streamlit Cloud:** The app should automatically install yt-dlp from requirements.txt.
-                If this error persists, please wait for the app to redeploy.
-                
-                **In the meantime:** Try using the Instaloader option in the sidebar.
+                **Try:** Use the RapidAPI downloader instead (click button above)
                 """)
             elif "Private" in error_msg or "login" in error_msg.lower():
-                st.info("� **Note:** This appears to be private/restricted content. Only public content can be accessed.")
+                st.info("🔒 **Note:** This appears to be private/restricted content. Only public content can be accessed.")
             else:
-                st.info("💡 **Try:** Switch to a different downloader in the sidebar options or wait a few minutes.")
-    
+                st.info("💡 **Try:** Use the RapidAPI downloader or switch downloaders in the sidebar.")
     # Footer
     st.markdown("---")
     st.markdown("""
