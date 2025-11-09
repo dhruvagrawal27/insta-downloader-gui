@@ -1732,10 +1732,8 @@ def handle_iiilab_download(options):
                         audio_size_mb = len(audio_content) / (1024 * 1024)
                         st.success(f"✅ Downloaded audio: {audio_size_mb:.2f} MB")
                         
-                        # Save to temp file for transcription
-                        temp_audio_path = f"temp_iiilab_audio_{int(time.time())}.m4a"
-                        with open(temp_audio_path, 'wb') as f:
-                            f.write(audio_content)
+                        # Store in memory (no disk usage!)
+                        audio_data = io.BytesIO(audio_content)
                         
                         break  # Success - exit retry loop
                         
@@ -1819,11 +1817,16 @@ def handle_iiilab_download(options):
                 # Extract audio from video
                 with st.spinner("🎵 Extracting audio from video..."):
                     from moviepy.editor import VideoFileClip
+                    import tempfile
                     
-                    # Save to temp file for MoviePy (required)
-                    temp_video_path = f"temp_iiilab_video_{int(time.time())}.mp4"
-                    with open(temp_video_path, 'wb') as f:
-                        f.write(video_data.getvalue())
+                    # Use temporary file (will be auto-deleted)
+                    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_video:
+                        temp_video_path = temp_video.name
+                        temp_video.write(video_data.getvalue())
+                    
+                    # Use temporary file for audio output
+                    with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_audio:
+                        temp_audio_path = temp_audio.name
                     
                     try:
                         # Extract audio
@@ -1831,8 +1834,11 @@ def handle_iiilab_download(options):
                         audio_clip = video_clip.audio
                         
                         # Save audio to temp file
-                        temp_audio_path = f"temp_iiilab_audio_{int(time.time())}.mp3"
                         audio_clip.write_audiofile(temp_audio_path, verbose=False, logger=None)
+                        
+                        # Load audio into memory
+                        with open(temp_audio_path, 'rb') as f:
+                            audio_data = io.BytesIO(f.read())
                         
                         # Clean up
                         audio_clip.close()
@@ -1840,26 +1846,35 @@ def handle_iiilab_download(options):
                         
                         st.success("✅ Audio extracted successfully")
                     finally:
-                        # Delete temp video file
+                        # Delete temp files immediately
                         if os.path.exists(temp_video_path):
                             os.remove(temp_video_path)
+                        if os.path.exists(temp_audio_path):
+                            os.remove(temp_audio_path)
             
-            # Transcribe with Groq
+            # Transcribe with Groq (using in-memory audio)
             with st.spinner("🤖 Transcribing with Groq AI... (Hinglish processing enabled)"):
                 from src.core.groq_transcriber import GroqTranscriber
+                import tempfile
                 
-                transcriber = GroqTranscriber()
-                result = transcriber.transcribe_and_process(
-                    audio_path=temp_audio_path,
-                    enable_post_processing=True  # Hinglish processing
-                )
+                # Create temporary file for Groq API (required for upload)
+                with tempfile.NamedTemporaryFile(suffix='.m4a', delete=False) as temp_file:
+                    temp_audio_path = temp_file.name
+                    temp_file.write(audio_data.getvalue())
                 
-                # Extract the final transcript
-                transcript = result.get("final_transcription", result.get("cleaned_transcription", ""))
-                
-                # Clean up audio file
-                if temp_audio_path and os.path.exists(temp_audio_path):
-                    os.remove(temp_audio_path)
+                try:
+                    transcriber = GroqTranscriber()
+                    result = transcriber.transcribe_and_process(
+                        audio_path=temp_audio_path,
+                        enable_post_processing=True  # Hinglish processing
+                    )
+                    
+                    # Extract the final transcript
+                    transcript = result.get("final_transcription", result.get("cleaned_transcription", ""))
+                finally:
+                    # Clean up temp file immediately after transcription
+                    if os.path.exists(temp_audio_path):
+                        os.remove(temp_audio_path)
             
             # Display results
             st.success("✅ Transcription complete!")
