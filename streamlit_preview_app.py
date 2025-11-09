@@ -1455,17 +1455,31 @@ def handle_rapidapi_download(options):
             progress_placeholder.info("🎤 Transcribing to Hinglish (this may take a minute)...")
             
             from src.core.groq_transcriber import GroqTranscriber
+            import tempfile
             
             transcriber = GroqTranscriber(api_key=groq_api_key)
-            audio_file = BytesIO(audio_data)
-            audio_file.name = "audio.mp3"
             
-            result = transcriber.transcribe_audio(
-                audio_file,
-                enable_post_processing=True  # Always enable Hinglish for RapidAPI
-            )
+            # Save audio to temp file (Groq needs file path)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio_file:
+                temp_audio_file.write(audio_data)
+                temp_audio_path = temp_audio_file.name
             
-            transcript_text = result.get("transcript", "")
+            try:
+                # Use transcribe_and_process which includes post-processing
+                result = transcriber.transcribe_and_process(
+                    temp_audio_path,
+                    enable_post_processing=True  # Always enable Hinglish for RapidAPI
+                )
+                
+                transcript_text = result.get("final_transcription", "")
+                
+            finally:
+                # Cleanup temp file
+                import os
+                try:
+                    os.unlink(temp_audio_path)
+                except:
+                    pass
             
             # Clear progress
             progress_placeholder.empty()
