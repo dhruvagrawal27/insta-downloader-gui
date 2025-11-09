@@ -1336,7 +1336,7 @@ def handle_rapidapi_download(options):
                 if media_type == "video":
                     st.info("🎬 Video detected - will extract audio for transcription")
             
-            # Step 3: Download video
+            # Step 3: Download video (keep in memory)
             if not media_url:
                 st.error("❌ No media URL found in response")
                 return
@@ -1345,35 +1345,57 @@ def handle_rapidapi_download(options):
                 media_response = requests.get(media_url, timeout=60)
                 media_response.raise_for_status()
                 
-                # Save to temporary file
-                temp_dir = tempfile.mkdtemp()
-                video_path = Path(temp_dir) / "video.mp4"
-                
-                with open(video_path, "wb") as f:
-                    f.write(media_response.content)
+                # Store video in memory (BytesIO)
+                from io import BytesIO
+                video_bytes = BytesIO(media_response.content)
+                video_data = media_response.content  # For download button
             
-            st.success(f"✅ Downloaded {len(media_response.content) / 1024 / 1024:.2f} MB")
+            st.success(f"✅ Downloaded {len(video_data) / 1024 / 1024:.2f} MB (stored in memory)")
             
-            # Step 4: Extract audio if video
-            audio_path = None
+            # Step 4: Extract audio if video (use temporary file ONLY for MoviePy, then delete)
+            audio_data = None
             if media_type == "video":
                 with st.spinner("🎵 Extracting audio..."):
                     try:
-                        video_clip = VideoFileClip(str(video_path))
+                        # MoviePy requires file path, so create minimal temp files
+                        temp_dir = tempfile.mkdtemp()
+                        temp_video = Path(temp_dir) / "video.mp4"
+                        temp_audio = Path(temp_dir) / "audio.mp3"
+                        
+                        # Write video to temp file
+                        with open(temp_video, "wb") as f:
+                            f.write(video_data)
+                        
+                        # Extract audio
+                        video_clip = VideoFileClip(str(temp_video))
                         if video_clip.audio is not None:
-                            audio_path = Path(temp_dir) / "audio.mp3"
-                            video_clip.audio.write_audiofile(str(audio_path), verbose=False, logger=None)
+                            video_clip.audio.write_audiofile(str(temp_audio), verbose=False, logger=None)
                             video_clip.close()
+                            
+                            # Read audio into memory
+                            with open(temp_audio, "rb") as f:
+                                audio_data = f.read()
+                            
                             st.success("✅ Audio extracted successfully")
                         else:
                             st.warning("⚠️ No audio found in video")
                             video_clip.close()
+                        
+                        # CLEANUP: Delete temp files immediately
+                        import shutil
+                        shutil.rmtree(temp_dir, ignore_errors=True)
+                        
                     except Exception as e:
                         st.error(f"❌ Audio extraction failed: {str(e)}")
+                        # Cleanup on error
+                        import shutil
+                        if 'temp_dir' in locals():
+                            shutil.rmtree(temp_dir, ignore_errors=True)
+            
             
             # Step 5: Transcribe if audio exists and transcription enabled
             transcript_text = None
-            if audio_path and options.get("transcribe", False):
+            if audio_data and options.get("transcribe", False):
                 with st.spinner("🎤 Transcribing audio with Groq (Hinglish)..."):
                     try:
                         # Check if Groq API key is available
@@ -1383,40 +1405,43 @@ def handle_rapidapi_download(options):
                             st.error("❌ Groq API key not found. Please add it in .env file or sidebar.")
                         else:
                             from src.core.groq_transcriber import GroqTranscriber
+                            from io import BytesIO
                             
                             transcriber = GroqTranscriber(api_key=groq_api_key)
                             
-                            # Read audio file
-                            with open(audio_path, "rb") as audio_file:
-                                # Transcribe using Groq
-                                result = transcriber.transcribe_audio(
-                                    audio_file,
-                                    enable_post_processing=options.get("enable_hinglish_processing", True)
+                            # Create BytesIO object from audio data (in-memory)
+                            audio_file = BytesIO(audio_data)
+                            audio_file.name = "audio.mp3"  # Give it a name for the API
+                            
+                            # Transcribe using Groq
+                            result = transcriber.transcribe_audio(
+                                audio_file,
+                                enable_post_processing=options.get("enable_hinglish_processing", True)
+                            )
+                            
+                            transcript_text = result.get("transcript", "")
+                            
+                            if transcript_text:
+                                st.success("✅ Transcription completed!")
+                                
+                                # Display transcript
+                                st.subheader("📝 Hinglish Transcription")
+                                st.text_area(
+                                    "Transcript",
+                                    value=transcript_text,
+                                    height=200,
+                                    key="rapidapi_transcript"
                                 )
                                 
-                                transcript_text = result.get("transcript", "")
-                                
-                                if transcript_text:
-                                    st.success("✅ Transcription completed!")
-                                    
-                                    # Display transcript
-                                    st.subheader("📝 Hinglish Transcription")
-                                    st.text_area(
-                                        "Transcript",
-                                        value=transcript_text,
-                                        height=200,
-                                        key="rapidapi_transcript"
-                                    )
-                                    
-                                    # Download button for transcript
-                                    st.download_button(
-                                        label="💾 Download Transcript",
-                                        data=transcript_text,
-                                        file_name=f"transcript_{title.replace(' ', '_')}.txt",
-                                        mime="text/plain"
-                                    )
-                                else:
-                                    st.warning("⚠️ Transcription returned empty result")
+                                # Download button for transcript
+                                st.download_button(
+                                    label="💾 Download Transcript",
+                                    data=transcript_text,
+                                    file_name=f"transcript_{title.replace(' ', '_')}.txt",
+                                    mime="text/plain"
+                                )
+                            else:
+                                st.warning("⚠️ Transcription returned empty result")
                     
                     except Exception as e:
                         st.error(f"❌ Transcription failed: {str(e)}")
@@ -1425,7 +1450,7 @@ def handle_rapidapi_download(options):
             elif not options.get("transcribe", False):
                 st.info("💡 Enable transcription in the sidebar to get Hinglish transcript")
             
-            # Step 6: Provide download options
+            # Step 6: Provide download options (all from memory)
             st.subheader("📥 Downloads")
             
             col1, col2, col3 = st.columns(3)
@@ -1433,7 +1458,7 @@ def handle_rapidapi_download(options):
             with col1:
                 st.download_button(
                     label="📹 Download Video",
-                    data=open(video_path, "rb").read(),
+                    data=video_data,  # Already in memory
                     file_name=f"{title.replace(' ', '_')}.mp4",
                     mime="video/mp4"
                 )
@@ -1449,10 +1474,10 @@ def handle_rapidapi_download(options):
                     )
             
             with col3:
-                if audio_path and audio_path.exists():
+                if audio_data:  # Audio is now in memory
                     st.download_button(
                         label="🎵 Download Audio",
-                        data=open(audio_path, "rb").read(),
+                        data=audio_data,  # Already in memory
                         file_name=f"{title.replace(' ', '_')}.mp3",
                         mime="audio/mpeg"
                     )
