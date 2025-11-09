@@ -313,7 +313,58 @@ def render_sidebar():
             "audio": False,
             "caption": False
         }
+    
+    elif current_method == "iiilab":
+        # iiiLab YouTube Downloader - Only transcription options
+        st.sidebar.header("⚙️ iiiLab YouTube Options")
+        st.sidebar.success("✅ No rate limits!")
+        st.sidebar.info("💡 Automatic Hinglish transcription using Groq AI")
         
+        # Only show Groq API key setting
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🎤 Transcription Settings")
+        
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        
+        if groq_api_key:
+            masked_key = groq_api_key[:8] + "..." + groq_api_key[-4:]
+            st.sidebar.success(f"✅ Groq API ready")
+            st.sidebar.caption(f"Key: {masked_key}")
+        else:
+            st.sidebar.warning("⚠️ No Groq API key found in .env file")
+            st.sidebar.info("""
+            **To enable transcription:**
+            1. Add to `.env`: `GROQ_API_KEY=gsk_your_key`
+            2. Restart app
+            3. Get key at: console.groq.com
+            """)
+        
+        # Tips
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("💡 How it works")
+        st.sidebar.info("""
+    1. **Enter** YouTube URL
+    2. **Click** Get Transcript
+    3. **Get** Hinglish transcript in Roman script
+    
+    • Fast & reliable
+    • No authentication needed
+    • Works with public videos
+    """)
+        
+        # Simple return for iiiLab
+        return {
+            "transcribe": True,  # Always transcribe for iiiLab
+            "use_groq": True,    # Always use Groq
+            "groq_api_key": groq_api_key,
+            "enable_hinglish_processing": True,  # Always enable Hinglish
+            "generate_prompts": False,  # No prompts for iiiLab
+            "video": False,
+            "thumbnail": False,
+            "audio": False,
+            "caption": False
+        }
+    
     else:
         # Standard Downloaders - Full options
         st.sidebar.header("⚙️ Preview Options")
@@ -1282,21 +1333,28 @@ def main():
     # Get preview options from sidebar
     options = render_sidebar()
     
-    # Downloader method selection
+    # Downloader method selection - 3 options now
     st.markdown("---")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         use_rapidapi = st.button(
-            "🚀 Use RapidAPI Downloader (Recommended)",
+            "� Instagram (RapidAPI)",
             use_container_width=True,
             type="primary",
-            help="Fast, reliable downloads using RapidAPI - bypasses Instagram rate limits"
+            help="Instagram downloader using RapidAPI - bypasses rate limits"
         )
     
     with col2:
+        use_iiilab = st.button(
+            "🎬 YouTube (iiiLab)",
+            use_container_width=True,
+            help="YouTube downloader using iiiLab API - fast and reliable"
+        )
+    
+    with col3:
         use_standard = st.button(
-            "🔧 Use Standard Downloaders",
+            "🔧 Standard Downloaders",
             use_container_width=True,
             help="Traditional method using Instaloader/yt-dlp (may face rate limits)"
         )
@@ -1304,6 +1362,8 @@ def main():
     # Store selection in session state
     if use_rapidapi:
         st.session_state.downloader_method = "rapidapi"
+    elif use_iiilab:
+        st.session_state.downloader_method = "iiilab"
     elif use_standard:
         st.session_state.downloader_method = "standard"
     
@@ -1316,6 +1376,8 @@ def main():
     # Show appropriate interface based on selection
     if st.session_state.downloader_method == "rapidapi":
         handle_rapidapi_download(options)
+    elif st.session_state.downloader_method == "iiilab":
+        handle_iiilab_download(options)
     else:
         handle_standard_download(options)
     
@@ -1323,8 +1385,8 @@ def main():
     st.markdown("---")
     st.markdown("""
     <div style="text-align: center; color: gray; font-size: 0.8em;">
-        <p>Instagram Media Previewer | No Local Storage | Built with Streamlit</p>
-        <p>⚠️ Please respect content creators' rights and Instagram's terms of service</p>
+        <p>Multi-Platform Media Downloader | No Local Storage | Built with Streamlit</p>
+        <p>⚠️ Please respect content creators' rights and platform terms of service</p>
         <p>🔒 All content is processed in memory - nothing saved to disk</p>
     </div>
     """, unsafe_allow_html=True)
@@ -1519,6 +1581,308 @@ def handle_rapidapi_download(options):
             with st.expander("🔍 Technical Details"):
                 st.code(traceback.format_exc())
                             
+            st.error(f"❌ Error: {str(e)}")
+            import traceback
+            with st.expander("🔍 Error Details"):
+                st.code(traceback.format_exc())
+
+
+def handle_iiilab_download(options):
+    """Handle downloads using iiiLab YouTube API with Groq transcription."""
+    st.subheader("🎬 YouTube to Hinglish Transcript")
+    st.info("📝 Enter a YouTube URL to get an AI-powered Hinglish transcript using Groq Whisper + Llama 3.3")
+    
+    # Simple URL input
+    url_input = st.text_input("🔗 YouTube URL", placeholder="https://www.youtube.com/watch?v=...")
+    
+    # Get Transcript button
+    if st.button("🚀 Get Transcript", type="primary", use_container_width=True):
+        if not url_input:
+            st.error("❌ Please enter a YouTube URL")
+            return
+        
+        # Validate YouTube URL
+        if not ('youtube.com' in url_input or 'youtu.be' in url_input):
+            st.error("❌ Please enter a valid YouTube URL")
+            return
+        
+        try:
+            # Fetch video from iiiLab API
+            with st.spinner("📥 Fetching video from YouTube..."):
+                import requests
+                import time
+                from hashlib import md5
+                
+                # Prepare iiiLab API request
+                timestamp = str(int(time.time() * 1000))
+                language = "en"
+                key = "6HTugjCXxR"
+                signature = md5((url_input + language + timestamp + key).encode()).hexdigest()
+                
+                headers = {
+                    "G-Timestamp": timestamp,
+                    "G-Footer": signature,
+                    "Accept-Language": language,
+                    "Content-Type": "application/json"
+                }
+                
+                payload = {"link": url_input}
+                
+                # Call iiiLab API
+                response = requests.post(
+                    "https://api.snapany.com/v1/extract",
+                    headers=headers,
+                    json=payload,
+                    timeout=30
+                )
+                
+                if response.status_code != 200:
+                    st.error(f"❌ Failed to fetch video. Status code: {response.status_code}")
+                    st.error(f"Response: {response.text}")
+                    return
+                
+                api_data = response.json()
+                
+                # Extract audio/video URLs from response
+                if not api_data.get('medias'):
+                    st.error("❌ No media data found in API response")
+                    with st.expander("🔍 API Response"):
+                        st.json(api_data)
+                    return
+                
+                # Get audio and video URLs from medias array
+                medias = api_data['medias']
+                audio_url = None
+                video_url = None
+                
+                # Try to find direct audio first (faster - no extraction needed!)
+                for media in medias:
+                    if media.get('media_type') == 'audio' and media.get('resource_url'):
+                        audio_url = media['resource_url']
+                        st.info("🎵 Found direct audio URL - skipping video extraction!")
+                        break
+                
+                # Fallback: Find video if no audio found
+                if not audio_url:
+                    for media in medias:
+                        if media.get('media_type') == 'video' and media.get('resource_url'):
+                            video_url = media['resource_url']
+                            break
+                
+                if not audio_url and not video_url:
+                    st.error("❌ No valid audio or video URL found")
+                    with st.expander("🔍 Medias Data"):
+                        st.json(medias)
+                    return
+            
+            # Download audio (either direct or extract from video)
+            temp_audio_path = None
+            
+            if audio_url:
+                # Direct audio download with retry logic and progress
+                max_retries = 3
+                retry_delay = 2
+                
+                for attempt in range(max_retries):
+                    try:
+                        # Use streaming to handle large files with better settings
+                        session = requests.Session()
+                        session.headers.update({
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Accept': '*/*',
+                            'Connection': 'keep-alive'
+                        })
+                        
+                        audio_response = session.get(
+                            audio_url, 
+                            timeout=(30, 180),  # (connect timeout, read timeout)
+                            stream=True,
+                            allow_redirects=True
+                        )
+                        audio_response.raise_for_status()
+                        
+                        # Get total file size
+                        total_size = int(audio_response.headers.get('content-length', 0))
+                        total_size_mb = total_size / (1024 * 1024)
+                        
+                        # Create progress bar and status
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        
+                        # Download in chunks with progress
+                        audio_content = bytearray()
+                        downloaded = 0
+                        
+                        for chunk in audio_response.iter_content(chunk_size=32768):  # 32KB chunks
+                            if chunk:
+                                audio_content.extend(chunk)
+                                downloaded += len(chunk)
+                                
+                                # Update progress
+                                if total_size > 0:
+                                    progress = downloaded / total_size
+                                    downloaded_mb = downloaded / (1024 * 1024)
+                                    progress_bar.progress(progress)
+                                    status_text.text(f"📥 Downloading: {downloaded_mb:.1f} / {total_size_mb:.1f} MB ({progress*100:.1f}%)")
+                        
+                        # Clear progress indicators
+                        progress_bar.empty()
+                        status_text.empty()
+                        
+                        audio_size_mb = len(audio_content) / (1024 * 1024)
+                        st.success(f"✅ Downloaded audio: {audio_size_mb:.2f} MB")
+                        
+                        # Save to temp file for transcription
+                        temp_audio_path = f"temp_iiilab_audio_{int(time.time())}.m4a"
+                        with open(temp_audio_path, 'wb') as f:
+                            f.write(audio_content)
+                        
+                        break  # Success - exit retry loop
+                        
+                    except (requests.exceptions.ChunkedEncodingError, 
+                            requests.exceptions.ConnectionError,
+                            requests.exceptions.Timeout) as e:
+                        if attempt < max_retries - 1:
+                            st.warning(f"⚠️ Download interrupted (attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay}s...")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2  # Exponential backoff
+                        else:
+                            raise Exception(f"Failed to download audio after {max_retries} attempts: {str(e)}")
+            
+            else:
+                # Fallback: Extract audio from video with progress
+                max_retries = 3
+                retry_delay = 2
+                
+                for attempt in range(max_retries):
+                    try:
+                        # Use streaming for large video files
+                        session = requests.Session()
+                        session.headers.update({
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Accept': '*/*',
+                            'Connection': 'keep-alive'
+                        })
+                        
+                        video_response = session.get(
+                            video_url, 
+                            timeout=(30, 180),
+                            stream=True,
+                            allow_redirects=True
+                        )
+                        video_response.raise_for_status()
+                        
+                        # Get total file size
+                        total_size = int(video_response.headers.get('content-length', 0))
+                        total_size_mb = total_size / (1024 * 1024)
+                        
+                        # Create progress bar and status
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        
+                        # Download in chunks with progress
+                        video_content = bytearray()
+                        downloaded = 0
+                        
+                        for chunk in video_response.iter_content(chunk_size=32768):
+                            if chunk:
+                                video_content.extend(chunk)
+                                downloaded += len(chunk)
+                                
+                                # Update progress
+                                if total_size > 0:
+                                    progress = downloaded / total_size
+                                    downloaded_mb = downloaded / (1024 * 1024)
+                                    progress_bar.progress(progress)
+                                    status_text.text(f"📥 Downloading video: {downloaded_mb:.1f} / {total_size_mb:.1f} MB ({progress*100:.1f}%)")
+                        
+                        # Clear progress indicators
+                        progress_bar.empty()
+                        status_text.empty()
+                        
+                        video_data = io.BytesIO(video_content)
+                        video_size_mb = len(video_content) / (1024 * 1024)
+                        st.success(f"✅ Downloaded video: {video_size_mb:.2f} MB")
+                        
+                        break  # Success - exit retry loop
+                        
+                    except (requests.exceptions.ChunkedEncodingError,
+                            requests.exceptions.ConnectionError,
+                            requests.exceptions.Timeout) as e:
+                        if attempt < max_retries - 1:
+                            st.warning(f"⚠️ Download interrupted (attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay}s...")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2
+                        else:
+                            raise Exception(f"Failed to download video after {max_retries} attempts: {str(e)}")
+                
+                # Extract audio from video
+                with st.spinner("🎵 Extracting audio from video..."):
+                    from moviepy.editor import VideoFileClip
+                    
+                    # Save to temp file for MoviePy (required)
+                    temp_video_path = f"temp_iiilab_video_{int(time.time())}.mp4"
+                    with open(temp_video_path, 'wb') as f:
+                        f.write(video_data.getvalue())
+                    
+                    try:
+                        # Extract audio
+                        video_clip = VideoFileClip(temp_video_path)
+                        audio_clip = video_clip.audio
+                        
+                        # Save audio to temp file
+                        temp_audio_path = f"temp_iiilab_audio_{int(time.time())}.mp3"
+                        audio_clip.write_audiofile(temp_audio_path, verbose=False, logger=None)
+                        
+                        # Clean up
+                        audio_clip.close()
+                        video_clip.close()
+                        
+                        st.success("✅ Audio extracted successfully")
+                    finally:
+                        # Delete temp video file
+                        if os.path.exists(temp_video_path):
+                            os.remove(temp_video_path)
+            
+            # Transcribe with Groq
+            with st.spinner("🤖 Transcribing with Groq AI... (Hinglish processing enabled)"):
+                from src.core.groq_transcriber import GroqTranscriber
+                
+                transcriber = GroqTranscriber()
+                result = transcriber.transcribe_and_process(
+                    audio_path=temp_audio_path,
+                    enable_post_processing=True  # Hinglish processing
+                )
+                
+                # Extract the final transcript
+                transcript = result.get("final_transcription", result.get("cleaned_transcription", ""))
+                
+                # Clean up audio file
+                if temp_audio_path and os.path.exists(temp_audio_path):
+                    os.remove(temp_audio_path)
+            
+            # Display results
+            st.success("✅ Transcription complete!")
+            
+            # Show transcript
+            st.markdown("### 📝 Hinglish Transcript")
+            st.text_area(
+                "Transcript",
+                value=transcript,
+                height=300,
+                label_visibility="collapsed"
+            )
+            
+            # Download button
+            st.download_button(
+                label="📥 Download Transcript",
+                data=transcript,
+                file_name=f"youtube_transcript_{int(time.time())}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+            
+        except Exception as e:
             st.error(f"❌ Error: {str(e)}")
             import traceback
             with st.expander("🔍 Error Details"):

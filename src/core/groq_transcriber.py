@@ -49,9 +49,9 @@ class GroqTranscriber:
         self.client = Groq(api_key=self.api_key)
         self.whisper_model = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3")
         self.llm_models = [
-            os.getenv("GROQ_PRIMARY_LLM", "openai/gpt-oss-120b"),  # Primary model
-            os.getenv("GROQ_FALLBACK_LLM_1", "llama-3.1-70b-versatile"),   # Fallback 1
-            os.getenv("GROQ_FALLBACK_LLM_2", "mixtral-8x7b-32768"),        # Fallback 2
+            os.getenv("GROQ_PRIMARY_LLM", "meta-llama/llama-4-scout-17b-16e-instruct"),  # Primary model (30k TPM)
+            os.getenv("GROQ_FALLBACK_LLM_1", "llama-3.3-70b-versatile"),   # Fallback 1
+            os.getenv("GROQ_FALLBACK_LLM_2", "llama-3.1-8b-instant"),        # Fallback 2
         ]
     
     def _load_from_env_file(self) -> Optional[str]:
@@ -72,6 +72,133 @@ class GroqTranscriber:
             pass
         return None
 
+    def _compress_audio_if_needed(
+        self,
+        audio_path: str,
+        max_size_mb: float = 24.5,  # Leave some margin below 25MB limit
+        progress_callback=None
+    ) -> str:
+        """
+        Compress audio file if it exceeds Groq's size limit (25MB).
+        Uses bitrate reduction to compress without trimming.
+        
+        Args:
+            audio_path: Path to the original audio file
+            max_size_mb: Maximum file size in MB
+            progress_callback: Optional callback for progress updates
+        
+        Returns:
+            Path to compressed audio (or original if compression not needed)
+        """
+        import os
+        from pathlib import Path
+        
+        # Check file size
+        file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+        
+        if file_size_mb <= max_size_mb:
+            # No compression needed
+            return audio_path
+        
+        if progress_callback:
+            progress_callback("", 5, f"Compressing audio ({file_size_mb:.1f} MB → ~{max_size_mb:.1f} MB)...")
+        
+        try:
+            from pydub import AudioSegment
+            
+            # Load audio
+            audio = AudioSegment.from_file(audio_path)
+            
+            # Calculate target bitrate to reach desired size
+            # Formula: bitrate (kbps) = (target_size_mb * 8192) / duration_seconds
+            duration_seconds = len(audio) / 1000.0
+            target_bitrate_kbps = int((max_size_mb * 8192) / duration_seconds)
+            
+            # Ensure bitrate is reasonable (minimum 32 kbps for intelligibility)
+            target_bitrate_kbps = max(32, min(target_bitrate_kbps, 128))
+            
+            # Create compressed file path
+            compressed_path = str(Path(audio_path).parent / f"compressed_{Path(audio_path).name}")
+            if compressed_path.endswith('.m4a'):
+                compressed_path = compressed_path.replace('.m4a', '.mp3')
+            
+            # Export with reduced bitrate
+            audio.export(
+                compressed_path,
+                format="mp3",
+                bitrate=f"{target_bitrate_kbps}k",
+                parameters=["-ac", "1"]  # Convert to mono to save space
+            )
+            
+            # Verify compression worked
+            compressed_size_mb = os.path.getsize(compressed_path) / (1024 * 1024)
+            
+            if progress_callback:
+                progress_callback("", 10, f"Compressed: {file_size_mb:.1f} MB → {compressed_size_mb:.1f} MB")
+            
+            return compressed_path
+            
+        except ImportError:
+            # pydub not available, try ffmpeg directly
+            if progress_callback:
+                progress_callback("", 5, "Compressing with ffmpeg...")
+            
+            import subprocess
+            
+            compressed_path = str(Path(audio_path).parent / f"compressed_{Path(audio_path).stem}.mp3")
+            
+            # Calculate target bitrate
+            duration_seconds = self._get_audio_duration(audio_path)
+            if duration_seconds:
+                target_bitrate_kbps = int((max_size_mb * 8192) / duration_seconds)
+                target_bitrate_kbps = max(32, min(target_bitrate_kbps, 128))
+            else:
+                target_bitrate_kbps = 64  # Default fallback
+            
+            # Use ffmpeg for compression
+            cmd = [
+                'ffmpeg', '-i', audio_path,
+                '-vn',  # No video
+                '-ac', '1',  # Mono
+                '-b:a', f'{target_bitrate_kbps}k',
+                '-y',  # Overwrite
+                compressed_path
+            ]
+            
+            subprocess.run(cmd, capture_output=True, check=True)
+            
+            compressed_size_mb = os.path.getsize(compressed_path) / (1024 * 1024)
+            
+            if progress_callback:
+                progress_callback("", 10, f"Compressed: {file_size_mb:.1f} MB → {compressed_size_mb:.1f} MB")
+            
+            return compressed_path
+            
+        except Exception as e:
+            # Compression failed, return original and hope it works
+            if progress_callback:
+                progress_callback("", 10, f"Compression failed, trying original file...")
+            return audio_path
+    
+    def _get_audio_duration(self, audio_path: str) -> float:
+        """Get audio duration in seconds."""
+        try:
+            from pydub import AudioSegment
+            audio = AudioSegment.from_file(audio_path)
+            return len(audio) / 1000.0
+        except:
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                     '-of', 'default=noprint_wrappers=1:nokey=1', audio_path],
+                    capture_output=True,
+                    text=True
+                )
+                return float(result.stdout.strip())
+            except:
+                return None
+
     def transcribe_audio(
         self, 
         audio_path: str, 
@@ -87,14 +214,21 @@ class GroqTranscriber:
         Returns:
             Tuple of (transcription_text, full_response_dict)
         """
+        # Compress audio if needed (Groq has 25MB limit)
+        compressed_audio_path = self._compress_audio_if_needed(
+            audio_path, 
+            max_size_mb=24.5,
+            progress_callback=progress_callback
+        )
+        
         if progress_callback:
             progress_callback("", 10, "Uploading audio to Groq Whisper...")
 
         try:
-            with open(audio_path, "rb") as audio_file:
+            with open(compressed_audio_path, "rb") as audio_file:
                 # Use Groq's Whisper API for transcription
                 transcription = self.client.audio.transcriptions.create(
-                    file=(Path(audio_path).name, audio_file.read()),
+                    file=(Path(compressed_audio_path).name, audio_file.read()),
                     model=self.whisper_model,
                     response_format="verbose_json",
                     temperature=0.8,
@@ -107,9 +241,23 @@ class GroqTranscriber:
             transcription_dict = transcription.model_dump() if hasattr(transcription, 'model_dump') else transcription
             transcription_text = transcription_dict.get("text", "")
             
+            # Clean up compressed file if it was created
+            if compressed_audio_path != audio_path:
+                try:
+                    os.remove(compressed_audio_path)
+                except:
+                    pass
+            
             return transcription_text, transcription_dict
             
         except Exception as e:
+            # Clean up compressed file on error too
+            if compressed_audio_path != audio_path:
+                try:
+                    os.remove(compressed_audio_path)
+                except:
+                    pass
+            
             error_msg = f"Groq Whisper transcription failed: {str(e)}"
             if progress_callback:
                 progress_callback("", 0, error_msg)
@@ -196,7 +344,7 @@ Return ONLY the cleaned transcription text without any additional commentary or 
                     ],
                     model=model_name,
                     temperature=0.8,
-                    max_tokens=8000,
+                    max_tokens=4000,  # Reduced to avoid exceeding 30k TPM limit
                 )
                 
                 cleaned_text = chat_completion.choices[0].message.content.strip()
