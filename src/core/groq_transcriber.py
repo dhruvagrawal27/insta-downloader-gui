@@ -47,9 +47,9 @@ class GroqTranscriber:
             )
         
         self.client = Groq(api_key=self.api_key)
-        self.whisper_model = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
+        self.whisper_model = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3")
         self.llm_models = [
-            os.getenv("GROQ_PRIMARY_LLM", "llama-3.3-70b-versatile"),  # Primary model
+            os.getenv("GROQ_PRIMARY_LLM", "openai/gpt-oss-120b"),  # Primary model
             os.getenv("GROQ_FALLBACK_LLM_1", "llama-3.1-70b-versatile"),   # Fallback 1
             os.getenv("GROQ_FALLBACK_LLM_2", "mixtral-8x7b-32768"),        # Fallback 2
         ]
@@ -97,7 +97,7 @@ class GroqTranscriber:
                     file=(Path(audio_path).name, audio_file.read()),
                     model=self.whisper_model,
                     response_format="verbose_json",
-                    temperature=0.0,
+                    temperature=0.8,
                 )
             
             if progress_callback:
@@ -195,7 +195,7 @@ Return ONLY the cleaned transcription text without any additional commentary or 
                         }
                     ],
                     model=model_name,
-                    temperature=0.3,
+                    temperature=0.8,
                     max_tokens=8000,
                 )
                 
