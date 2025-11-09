@@ -264,10 +264,55 @@ def render_sidebar():
     
     # Show different options based on downloader method
     if current_method == "rapidapi":
-        # RapidAPI Downloader - Minimal options
+        # RapidAPI Downloader - Only transcription options
         st.sidebar.header("⚙️ RapidAPI Options")
         st.sidebar.success("✅ No rate limits!")
-        st.sidebar.info("💡 RapidAPI bypasses Instagram restrictions - no authentication needed!")
+        st.sidebar.info("💡 Automatic Hinglish transcription using Groq AI")
+        
+        # Only show Groq API key setting
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🎤 Transcription Settings")
+        
+        groq_api_key = os.getenv("GROQ_API_KEY")
+        
+        if groq_api_key:
+            masked_key = groq_api_key[:8] + "..." + groq_api_key[-4:]
+            st.sidebar.success(f"✅ Groq API ready")
+            st.sidebar.caption(f"Key: {masked_key}")
+        else:
+            st.sidebar.warning("⚠️ No Groq API key found in .env file")
+            st.sidebar.info("""
+            **To enable transcription:**
+            1. Add to `.env`: `GROQ_API_KEY=gsk_your_key`
+            2. Restart app
+            3. Get key at: console.groq.com
+            """)
+        
+        # Tips
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("💡 How it works")
+        st.sidebar.info("""
+    1. **Enter** Instagram URL
+    2. **Click** Download & Transcribe
+    3. **Get** Hinglish transcript in Roman script
+    
+    • Fast & reliable
+    • No authentication needed
+    • Works with public content
+    """)
+        
+        # Simple return for RapidAPI
+        return {
+            "transcribe": True,  # Always transcribe for RapidAPI
+            "use_groq": True,    # Always use Groq
+            "groq_api_key": groq_api_key,
+            "enable_hinglish_processing": True,  # Always enable Hinglish
+            "generate_prompts": False,  # No prompts for RapidAPI
+            "video": False,
+            "thumbnail": False,
+            "audio": False,
+            "caption": False
+        }
         
     else:
         # Standard Downloaders - Full options
@@ -1286,22 +1331,22 @@ def main():
 
 
 def handle_rapidapi_download(options):
-    """Handle downloads using RapidAPI."""
-    st.subheader("🚀 RapidAPI Instagram Downloader")
-    st.info("✨ **Fast & Reliable**: This method uses RapidAPI to bypass Instagram rate limits!")
+    """Handle downloads using RapidAPI - focused on transcription only."""
+    st.subheader("🎤 Instagram to Hinglish Transcript")
+    st.info("✨ Enter Instagram URL below to get automatic Hinglish transcription")
     
     # URL input
     url_input = st.text_input(
         label="Instagram Reel/Post URL",
         placeholder="https://www.instagram.com/reel/... or https://www.instagram.com/p/...",
-        help="Enter Instagram reel or post URL",
+        help="Paste Instagram reel or post URL",
         key="rapidapi_url_input"
     )
     
     # Download button
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        download_btn = st.button("📥 Download & Transcribe", use_container_width=True, type="primary", key="rapidapi_download_btn")
+        download_btn = st.button("� Get Transcript", use_container_width=True, type="primary", key="rapidapi_download_btn")
     
     if download_btn:
         if not url_input.strip():
@@ -1313,214 +1358,153 @@ def handle_rapidapi_download(options):
             st.error("❌ Please enter a valid Instagram URL (must contain instagram.com)")
             return
         
-        # Process with RapidAPI
+        # Check Groq API key
+        groq_api_key = options.get("groq_api_key") or os.getenv("GROQ_API_KEY")
+        if not groq_api_key:
+            st.error("❌ Groq API key not found. Please add GROQ_API_KEY to your .env file")
+            st.info("Get your free API key at: https://console.groq.com")
+            return
+        
+        # Single progress indicator
+        progress_placeholder = st.empty()
+        
         try:
             import requests
             from moviepy.editor import VideoFileClip
             import tempfile
             from pathlib import Path
+            from io import BytesIO
             
             # Step 1: Fetch from RapidAPI
-            with st.spinner("🔍 Fetching content from Instagram..."):
-                api_url = "https://instagram-story-downloader-media-downloader.p.rapidapi.com/unified/url"
-                
-                headers = {
-                    "x-rapidapi-key": "0d7481b280mshcd4e4845f499b53p1ddf9djsnb259e8d623b6",
-                    "x-rapidapi-host": "instagram-story-downloader-media-downloader.p.rapidapi.com"
-                }
-                
-                response = requests.get(api_url, headers=headers, params={"url": url_input.strip()})
-                
-                if response.status_code != 200:
-                    st.error(f"❌ API Error: {response.status_code}")
-                    st.json(response.json() if response.text else {})
-                    return
-                
-                data = response.json()
-                
-                if not data.get("success"):
-                    st.error("❌ Failed to fetch content from Instagram")
-                    st.json(data)
-                    return
+            progress_placeholder.info("🔍 Fetching content from Instagram...")
             
-            st.success("✅ Content fetched successfully!")
+            api_url = "https://instagram-story-downloader-media-downloader.p.rapidapi.com/unified/url"
+            headers = {
+                "x-rapidapi-key": "0d7481b280mshcd4e4845f499b53p1ddf9djsnb259e8d623b6",
+                "x-rapidapi-host": "instagram-story-downloader-media-downloader.p.rapidapi.com"
+            }
             
-            # Extract data
+            response = requests.get(api_url, headers=headers, params={"url": url_input.strip()}, timeout=30)
+            
+            if response.status_code != 200:
+                progress_placeholder.empty()
+                st.error(f"❌ Failed to fetch content (Error {response.status_code})")
+                return
+            
+            data = response.json()
+            if not data.get("success"):
+                progress_placeholder.empty()
+                st.error("❌ Could not fetch Instagram content")
+                return
+            
+            # Extract media info
             media_type = data.get("media_type", "unknown")
             content = data.get("data", {}).get("content", {})
             media_url = content.get("media_url")
-            thumbnail_url = content.get("thumbnail_url")
             title = data.get("data", {}).get("title", "Instagram Media")
             
-            # Step 2: Show thumbnail preview
-            st.subheader("👀 Preview")
-            col1, col2 = st.columns([1, 2])
-            
-            with col1:
-                if thumbnail_url:
-                    st.image(thumbnail_url, caption="Thumbnail Preview", use_container_width=True)
-                st.info(f"**Type**: {media_type.capitalize()}")
-                st.info(f"**Title**: {title}")
-            
-            with col2:
-                st.success("✅ Media URL obtained")
-                if media_type == "video":
-                    st.info("🎬 Video detected - will extract audio for transcription")
-            
-            # Step 3: Download video (keep in memory)
             if not media_url:
-                st.error("❌ No media URL found in response")
+                progress_placeholder.empty()
+                st.error("❌ No media URL found")
                 return
             
-            with st.spinner("📥 Downloading media..."):
-                media_response = requests.get(media_url, timeout=60)
-                media_response.raise_for_status()
-                
-                # Store video in memory (BytesIO)
-                from io import BytesIO
-                video_bytes = BytesIO(media_response.content)
-                video_data = media_response.content  # For download button
+            if media_type != "video":
+                progress_placeholder.empty()
+                st.warning("⚠️ Only video content can be transcribed (no audio in images)")
+                return
             
-            st.success(f"✅ Downloaded {len(video_data) / 1024 / 1024:.2f} MB (stored in memory)")
+            # Step 2: Download video
+            progress_placeholder.info("📥 Downloading video...")
+            media_response = requests.get(media_url, timeout=60)
+            media_response.raise_for_status()
+            video_data = media_response.content
             
-            # Step 4: Extract audio if video (use temporary file ONLY for MoviePy, then delete)
-            audio_data = None
-            if media_type == "video":
-                with st.spinner("🎵 Extracting audio..."):
-                    try:
-                        # MoviePy requires file path, so create minimal temp files
-                        temp_dir = tempfile.mkdtemp()
-                        temp_video = Path(temp_dir) / "video.mp4"
-                        temp_audio = Path(temp_dir) / "audio.mp3"
-                        
-                        # Write video to temp file
-                        with open(temp_video, "wb") as f:
-                            f.write(video_data)
-                        
-                        # Extract audio
-                        video_clip = VideoFileClip(str(temp_video))
-                        if video_clip.audio is not None:
-                            video_clip.audio.write_audiofile(str(temp_audio), verbose=False, logger=None)
-                            video_clip.close()
-                            
-                            # Read audio into memory
-                            with open(temp_audio, "rb") as f:
-                                audio_data = f.read()
-                            
-                            st.success("✅ Audio extracted successfully")
-                        else:
-                            st.warning("⚠️ No audio found in video")
-                            video_clip.close()
-                        
-                        # CLEANUP: Delete temp files immediately
-                        import shutil
-                        shutil.rmtree(temp_dir, ignore_errors=True)
-                        
-                    except Exception as e:
-                        st.error(f"❌ Audio extraction failed: {str(e)}")
-                        # Cleanup on error
-                        import shutil
-                        if 'temp_dir' in locals():
-                            shutil.rmtree(temp_dir, ignore_errors=True)
+            # Step 3: Extract audio
+            progress_placeholder.info("🎵 Extracting audio from video...")
             
+            temp_dir = tempfile.mkdtemp()
+            temp_video = Path(temp_dir) / "video.mp4"
+            temp_audio = Path(temp_dir) / "audio.mp3"
             
-            # Step 5: Transcribe if audio exists and transcription enabled
-            transcript_text = None
-            if audio_data and options.get("transcribe", False):
-                with st.spinner("🎤 Transcribing audio with Groq (Hinglish)..."):
-                    try:
-                        # Check if Groq API key is available
-                        groq_api_key = options.get("groq_api_key") or os.getenv("GROQ_API_KEY")
-                        
-                        if not groq_api_key:
-                            st.error("❌ Groq API key not found. Please add it in .env file or sidebar.")
-                        else:
-                            from src.core.groq_transcriber import GroqTranscriber
-                            from io import BytesIO
-                            
-                            transcriber = GroqTranscriber(api_key=groq_api_key)
-                            
-                            # Create BytesIO object from audio data (in-memory)
-                            audio_file = BytesIO(audio_data)
-                            audio_file.name = "audio.mp3"  # Give it a name for the API
-                            
-                            # Transcribe using Groq
-                            result = transcriber.transcribe_audio(
-                                audio_file,
-                                enable_post_processing=options.get("enable_hinglish_processing", True)
-                            )
-                            
-                            transcript_text = result.get("transcript", "")
-                            
-                            if transcript_text:
-                                st.success("✅ Transcription completed!")
-                                
-                                # Display transcript
-                                st.subheader("📝 Hinglish Transcription")
-                                st.text_area(
-                                    "Transcript",
-                                    value=transcript_text,
-                                    height=200,
-                                    key="rapidapi_transcript"
-                                )
-                                
-                                # Download button for transcript
-                                st.download_button(
-                                    label="💾 Download Transcript",
-                                    data=transcript_text,
-                                    file_name=f"transcript_{title.replace(' ', '_')}.txt",
-                                    mime="text/plain"
-                                )
-                            else:
-                                st.warning("⚠️ Transcription returned empty result")
-                    
-                    except Exception as e:
-                        st.error(f"❌ Transcription failed: {str(e)}")
-                        import traceback
-                        st.code(traceback.format_exc())
-            elif not options.get("transcribe", False):
-                st.info("💡 Enable transcription in the sidebar to get Hinglish transcript")
+            # Write video to temp file
+            with open(temp_video, "wb") as f:
+                f.write(video_data)
             
-            # Step 6: Provide download options (all from memory)
-            st.subheader("📥 Downloads")
-            
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                st.download_button(
-                    label="📹 Download Video",
-                    data=video_data,  # Already in memory
-                    file_name=f"{title.replace(' ', '_')}.mp4",
-                    mime="video/mp4"
-                )
-            
-            with col2:
-                if thumbnail_url:
-                    thumb_response = requests.get(thumbnail_url)
-                    st.download_button(
-                        label="🖼️ Download Thumbnail",
-                        data=thumb_response.content,
-                        file_name=f"{title.replace(' ', '_')}_thumb.jpg",
-                        mime="image/jpeg"
-                    )
-            
-            with col3:
-                if audio_data:  # Audio is now in memory
-                    st.download_button(
-                        label="🎵 Download Audio",
-                        data=audio_data,  # Already in memory
-                        file_name=f"{title.replace(' ', '_')}.mp3",
-                        mime="audio/mpeg"
-                    )
-            
-            # Cleanup
-            try:
+            # Extract audio
+            video_clip = VideoFileClip(str(temp_video))
+            if video_clip.audio is None:
+                video_clip.close()
                 import shutil
-                shutil.rmtree(temp_dir)
-            except:
-                pass
-        
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                progress_placeholder.empty()
+                st.warning("⚠️ No audio found in this video")
+                return
+            
+            video_clip.audio.write_audiofile(str(temp_audio), verbose=False, logger=None)
+            video_clip.close()
+            
+            # Read audio into memory
+            with open(temp_audio, "rb") as f:
+                audio_data = f.read()
+            
+            # Cleanup temp files
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+            # Step 4: Transcribe with Groq
+            progress_placeholder.info("🎤 Transcribing to Hinglish (this may take a minute)...")
+            
+            from src.core.groq_transcriber import GroqTranscriber
+            
+            transcriber = GroqTranscriber(api_key=groq_api_key)
+            audio_file = BytesIO(audio_data)
+            audio_file.name = "audio.mp3"
+            
+            result = transcriber.transcribe_audio(
+                audio_file,
+                enable_post_processing=True  # Always enable Hinglish for RapidAPI
+            )
+            
+            transcript_text = result.get("transcript", "")
+            
+            # Clear progress
+            progress_placeholder.empty()
+            
+            if not transcript_text:
+                st.error("❌ Transcription returned empty result")
+                return
+            
+            # Display result
+            st.success("✅ Transcription Complete!")
+            st.markdown(f"**Title:** {title}")
+            st.markdown("---")
+            
+            # Show transcript
+            st.subheader("📝 Hinglish Transcript (Roman Script)")
+            st.text_area(
+                "Transcript",
+                value=transcript_text,
+                height=300,
+                key="rapidapi_transcript_result",
+                label_visibility="collapsed"
+            )
+            
+            # Download button for transcript
+            st.download_button(
+                label="💾 Download Transcript (.txt)",
+                data=transcript_text,
+                file_name=f"transcript_{title.replace(' ', '_')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+            
         except Exception as e:
+            progress_placeholder.empty()
+            st.error(f"❌ Error: {str(e)}")
+            import traceback
+            with st.expander("🔍 Technical Details"):
+                st.code(traceback.format_exc())
+                            
             st.error(f"❌ Error: {str(e)}")
             import traceback
             with st.expander("🔍 Error Details"):
