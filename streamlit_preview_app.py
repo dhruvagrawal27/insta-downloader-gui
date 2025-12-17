@@ -1682,15 +1682,24 @@ def handle_iiilab_download(options):
                 # Direct audio download with retry logic and progress
                 max_retries = 3
                 retry_delay = 2
+                download_success = False
                 
                 for attempt in range(max_retries):
                     try:
-                        # Use streaming to handle large files with better settings
+                        # Use streaming to handle large files with browser-like headers
                         session = requests.Session()
+                        # Full browser headers to avoid 403 from YouTube CDN
                         session.headers.update({
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                             'Accept': '*/*',
-                            'Connection': 'keep-alive'
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'Accept-Encoding': 'identity;q=1, *;q=0',
+                            'Connection': 'keep-alive',
+                            'Referer': 'https://www.youtube.com/',
+                            'Origin': 'https://www.youtube.com',
+                            'Sec-Fetch-Dest': 'audio',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'cross-site',
                         })
                         
                         audio_response = session.get(
@@ -1700,6 +1709,7 @@ def handle_iiilab_download(options):
                             allow_redirects=True
                         )
                         audio_response.raise_for_status()
+                        download_success = True
                         
                         # Get total file size
                         total_size = int(audio_response.headers.get('content-length', 0))
@@ -1746,20 +1756,48 @@ def handle_iiilab_download(options):
                             retry_delay *= 2  # Exponential backoff
                         else:
                             raise Exception(f"Failed to download audio after {max_retries} attempts: {str(e)}")
+                    except requests.exceptions.HTTPError as e:
+                        # 403 Forbidden - YouTube CDN blocked direct access
+                        if e.response.status_code == 403:
+                            st.warning(f"⚠️ Direct audio download blocked (403). Will try video extraction instead...")
+                            download_success = False
+                            break  # Exit retry loop, will fall through to video extraction
+                        else:
+                            if attempt < max_retries - 1:
+                                st.warning(f"⚠️ HTTP Error {e.response.status_code} (attempt {attempt + 1}/{max_retries}). Retrying...")
+                                time.sleep(retry_delay)
+                                retry_delay *= 2
+                            else:
+                                raise
+                
+                # If audio download failed due to 403, fall back to video extraction
+                if not download_success and video_url:
+                    st.info("🎬 Falling back to video download and audio extraction...")
+                    audio_url = None  # Force video extraction path
             
-            else:
+            if not audio_url or (audio_url and not download_success):
                 # Fallback: Extract audio from video with progress
+                if not video_url:
+                    raise Exception("No video URL available for fallback extraction")
+                    
                 max_retries = 3
                 retry_delay = 2
                 
                 for attempt in range(max_retries):
                     try:
-                        # Use streaming for large video files
+                        # Use streaming for large video files with browser-like headers
                         session = requests.Session()
                         session.headers.update({
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                             'Accept': '*/*',
-                            'Connection': 'keep-alive'
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'Accept-Encoding': 'identity;q=1, *;q=0',
+                            'Connection': 'keep-alive',
+                            'Referer': 'https://www.youtube.com/',
+                            'Origin': 'https://www.youtube.com',
+                            'Sec-Fetch-Dest': 'video',
+                            'Sec-Fetch-Mode': 'cors',
+                            'Sec-Fetch-Site': 'cross-site',
                         })
                         
                         video_response = session.get(
@@ -1813,6 +1851,14 @@ def handle_iiilab_download(options):
                             retry_delay *= 2
                         else:
                             raise Exception(f"Failed to download video after {max_retries} attempts: {str(e)}")
+                    except requests.exceptions.HTTPError as e:
+                        # YouTube CDN may block video too
+                        if attempt < max_retries - 1:
+                            st.warning(f"⚠️ HTTP Error {e.response.status_code} (attempt {attempt + 1}/{max_retries}). Retrying...")
+                            time.sleep(retry_delay)
+                            retry_delay *= 2
+                        else:
+                            raise Exception(f"YouTube CDN blocked download (Error {e.response.status_code}). This video may have download restrictions. Try a different video.")
                 
                 # Extract audio from video
                 with st.spinner("🎵 Extracting audio from video..."):
