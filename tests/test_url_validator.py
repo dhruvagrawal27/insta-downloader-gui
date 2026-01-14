@@ -16,6 +16,11 @@ class TestURLValidator(unittest.TestCase):
                 "https://www.instagram.com/reel/Cdef789/?utm_source=ig_web_copy_link"
             )
         )
+        # Test plural /reels/ format
+        self.assertTrue(
+            is_valid_instagram_url("https://www.instagram.com/reels/DNqEoxKsxb2/")
+        )
+        self.assertTrue(is_valid_instagram_url("https://instagram.com/reels/Cabc456/"))
 
     def test_valid_post_url(self):
         """Test valid post URLs."""

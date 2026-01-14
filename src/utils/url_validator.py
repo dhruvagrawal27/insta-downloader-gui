@@ -7,7 +7,7 @@ def is_valid_instagram_url(url: str) -> bool:
 
     A URL is considered valid if:
     1. Domain is 'instagram.com' or 'www.instagram.com'
-    2. Path contains '/reel/' or '/p/' followed by an ID
+    2. Path contains '/reel/', '/reels/', or '/p/' followed by an ID
     3. Has a valid reel/post ID after the pattern
 
     Args:
@@ -23,9 +23,16 @@ def is_valid_instagram_url(url: str) -> bool:
 
         path = parsed.path
 
-        # Check for reel URLs
+        # Check for reel URLs (singular)
         if "/reel/" in path:
             parts = path.split("/reel/", 1)
+            if len(parts) < 2 or not parts[1].split("/")[0]:
+                return False
+            return True
+
+        # Check for reels URLs (plural) - alternate format
+        if "/reels/" in path:
+            parts = path.split("/reels/", 1)
             if len(parts) < 2 or not parts[1].split("/")[0]:
                 return False
             return True
