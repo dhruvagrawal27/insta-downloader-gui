@@ -1704,80 +1704,78 @@ def handle_iiilab_download(options):
             
             # Method 1: Try yt-dlp (more reliable for YouTube)
             try:
-                import subprocess
                 import tempfile
                 from pathlib import Path
-                import json
+                import yt_dlp
                 
                 # Create temp directory
                 temp_dir = tempfile.mkdtemp()
-                output_path = Path(temp_dir) / "audio.%(ext)s"
-                progress_file = Path(temp_dir) / "progress.txt"
+                output_template = str(Path(temp_dir) / "audio.%(ext)s")
                 
                 # Progress tracking
                 progress_bar = st.progress(0)
                 status_text = st.empty()
                 
+                # Progress hook for yt-dlp
+                def progress_hook(d):
+                    if d['status'] == 'downloading':
+                        try:
+                            # Extract progress info
+                            if 'downloaded_bytes' in d and 'total_bytes' in d:
+                                downloaded = d['downloaded_bytes']
+                                total = d['total_bytes']
+                                percent = (downloaded / total) * 100
+                                progress_bar.progress(min(percent / 100.0, 1.0))
+                                
+                                downloaded_mb = downloaded / (1024 * 1024)
+                                total_mb = total / (1024 * 1024)
+                                speed = d.get('speed', 0)
+                                speed_mb = speed / (1024 * 1024) if speed else 0
+                                eta = d.get('eta', 0)
+                                
+                                status_text.text(f"📥 Downloading: {downloaded_mb:.1f}/{total_mb:.1f} MB ({percent:.1f}%) - Speed: {speed_mb:.1f} MB/s - ETA: {eta}s")
+                            elif 'total_bytes_estimate' in d:
+                                # Fallback if total_bytes not available
+                                downloaded = d['downloaded_bytes']
+                                total = d['total_bytes_estimate']
+                                percent = (downloaded / total) * 100
+                                progress_bar.progress(min(percent / 100.0, 1.0))
+                                status_text.text(f"📥 Downloading: ~{percent:.1f}%")
+                        except:
+                            pass
+                    elif d['status'] == 'finished':
+                        progress_bar.progress(1.0)
+                        status_text.text("📥 Download complete, processing...")
+                
                 try:
-                    # Download audio-only using yt-dlp with progress
-                    # Use simpler output format for better progress parsing
-                    cmd = [
-                        "yt-dlp",
-                        "-f", "bestaudio",
-                        "-o", str(output_path),
-                        url_input.strip(),
-                        "--no-playlist",
-                        "--newline",
-                        "--progress"
-                    ]
+                    # yt-dlp options for audio-only download
+                    ydl_opts = {
+                        'format': 'bestaudio/best',
+                        'outtmpl': output_template,
+                        'quiet': True,
+                        'no_warnings': True,
+                        'progress_hooks': [progress_hook],
+                        'postprocessors': [{
+                            'key': 'FFmpegExtractAudio',
+                            'preferredcodec': 'm4a',
+                        }],
+                    }
                     
-                    # Run with real-time progress
-                    process = subprocess.Popen(
-                        cmd,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,  # Combine stderr into stdout
-                        text=True,
-                        bufsize=1,
-                        universal_newlines=True
-                    )
-                    
-                    # Parse progress in real-time
-                    for line in iter(process.stdout.readline, ''):
-                        line = line.strip()
-                        if line:
-                            # Look for download progress in yt-dlp output
-                            # Format: [download]  50.0% of 10.00MiB at 1.00MiB/s ETA 00:05
-                            if '[download]' in line and '%' in line:
-                                try:
-                                    # Extract percentage
-                                    if '%' in line:
-                                        percent_str = line.split('%')[0].split()[-1]
-                                        percent = float(percent_str)
-                                        progress_bar.progress(min(percent / 100.0, 1.0))
-                                        
-                                        # Show full status line
-                                        status_text.text(f"📥 {line}")
-                                except:
-                                    pass
-                            # Also show other download-related messages
-                            elif '[download]' in line or 'Downloading' in line:
-                                status_text.text(f"📥 {line}")
-                    
-                    process.wait()
-                    
+                    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                        info = ydl.extract_info(url_input.strip(), download=True)
+                        
                     # Clear progress indicators
                     progress_bar.empty()
                     status_text.empty()
                     
-                    if process.returncode == 0:
-                        # Find downloaded file
-                        audio_files = list(Path(temp_dir).glob("audio.*"))
-                        if audio_files:
-                            audio_file = audio_files[0]
-                            with open(audio_file, 'rb') as f:
-                                audio_data = f.read()
-                            st.success(f"✅ Downloaded audio with yt-dlp: {len(audio_data) / 1024 / 1024:.1f} MB")
-                            download_success = True
+                    # Find downloaded file
+                    audio_files = list(Path(temp_dir).glob("audio.*"))
+                    if audio_files:
+                        audio_file = audio_files[0]
+                        with open(audio_file, 'rb') as f:
+                            audio_data = f.read()
+                        st.success(f"✅ Downloaded audio with yt-dlp: {len(audio_data) / 1024 / 1024:.1f} MB")
+                        download_success = True
                     
                 finally:
                     # Cleanup
@@ -1889,93 +1887,84 @@ def handle_iiilab_download(options):
             if not download_success and video_url:
                 # Try yt-dlp for video first
                 try:
-                    import subprocess
                     import tempfile
                     from pathlib import Path
+                    import yt_dlp
+                    from moviepy.editor import VideoFileClip
                     
                     temp_dir = tempfile.mkdtemp()
-                    output_path = Path(temp_dir) / "video.%(ext)s"
+                    video_output_template = str(Path(temp_dir) / "video.%(ext)s")
                     
                     # Progress tracking
                     progress_bar = st.progress(0)
                     status_text = st.empty()
                     
+                    # Progress hook for yt-dlp
+                    def progress_hook(d):
+                        if d['status'] == 'downloading':
+                            try:
+                                if 'downloaded_bytes' in d and 'total_bytes' in d:
+                                    downloaded = d['downloaded_bytes']
+                                    total = d['total_bytes']
+                                    percent = (downloaded / total) * 100
+                                    progress_bar.progress(min(percent / 100.0, 1.0))
+                                    
+                                    downloaded_mb = downloaded / (1024 * 1024)
+                                    total_mb = total / (1024 * 1024)
+                                    speed = d.get('speed', 0)
+                                    speed_mb = speed / (1024 * 1024) if speed else 0
+                                    
+                                    status_text.text(f"🎬 Downloading video: {downloaded_mb:.1f}/{total_mb:.1f} MB ({percent:.1f}%) - Speed: {speed_mb:.1f} MB/s")
+                            except:
+                                pass
+                        elif d['status'] == 'finished':
+                            progress_bar.progress(1.0)
+                            status_text.text("🎬 Download complete, processing...")
+                    
                     try:
-                        cmd = [
-                            "yt-dlp",
-                            "-f", "best[ext=mp4]",
-                            "-o", str(output_path),
-                            url_input.strip(),
-                            "--no-playlist",
-                            "--newline",
-                            "--progress"
-                        ]
+                        # yt-dlp options for video download
+                        ydl_opts = {
+                            'format': 'best[ext=mp4]/best',
+                            'outtmpl': video_output_template,
+                            'quiet': True,
+                            'no_warnings': True,
+                            'progress_hooks': [progress_hook],
+                        }
                         
-                        # Run with real-time progress
-                        process = subprocess.Popen(
-                            cmd,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            text=True,
-                            bufsize=1,
-                            universal_newlines=True
-                        )
-                        
-                        # Parse progress in real-time
-                        for line in iter(process.stdout.readline, ''):
-                            line = line.strip()
-                            if line:
-                                # Look for download progress
-                                if '[download]' in line and '%' in line:
-                                    try:
-                                        # Extract percentage
-                                        if '%' in line:
-                                            percent_str = line.split('%')[0].split()[-1]
-                                            percent = float(percent_str)
-                                            progress_bar.progress(min(percent / 100.0, 1.0))
-                                            
-                                            # Show full status line
-                                            status_text.text(f"🎬 {line}")
-                                    except:
-                                        pass
-                                elif '[download]' in line or 'Downloading' in line:
-                                    status_text.text(f"🎬 {line}")
-                        
-                        process.wait()
+                        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            info = ydl.extract_info(url_input.strip(), download=True)
                         
                         # Clear progress indicators
                         progress_bar.empty()
                         status_text.empty()
                         
-                        if process.returncode == 0:
-                            video_files = list(Path(temp_dir).glob("video.*"))
-                            if video_files:
-                                video_file = video_files[0]
-                                video_size_mb = video_file.stat().st_size / 1024 / 1024
-                                st.success(f"✅ Downloaded video with yt-dlp: {video_size_mb:.1f} MB")
+                        # Find downloaded video file
+                        video_files = list(Path(temp_dir).glob("video.*"))
+                        if video_files:
+                            video_file = video_files[0]
+                            video_size_mb = video_file.stat().st_size / 1024 / 1024
+                            st.success(f"✅ Downloaded video with yt-dlp: {video_size_mb:.1f} MB")
+                            
+                            # Extract audio
+                            st.info("🎵 Extracting audio from video...")
+                            audio_path = Path(temp_dir) / "audio.m4a"
+                            
+                            try:
+                                video_clip = VideoFileClip(str(video_file))
+                                if video_clip.audio is None:
+                                    raise Exception("Video has no audio track")
                                 
-                                # Extract audio
-                                st.info("🎵 Extracting audio from video...")
-                                from moviepy.editor import VideoFileClip
+                                video_clip.audio.write_audiofile(str(audio_path), verbose=False, logger=None)
+                                video_clip.close()
                                 
-                                audio_path = Path(temp_dir) / "audio.m4a"
+                                with open(audio_path, 'rb') as f:
+                                    audio_data = f.read()
                                 
-                                try:
-                                    video_clip = VideoFileClip(str(video_file))
-                                    if video_clip.audio is None:
-                                        raise Exception("Video has no audio track")
-                                    
-                                    video_clip.audio.write_audiofile(str(audio_path), verbose=False, logger=None)
-                                    video_clip.close()
-                                    
-                                    with open(audio_path, 'rb') as f:
-                                        audio_data = f.read()
-                                    
-                                    st.success(f"✅ Extracted audio: {len(audio_data) / 1024 / 1024:.1f} MB")
-                                    download_success = True
-                                
-                                except Exception as extract_error:
-                                    st.warning(f"⚠️ Audio extraction failed: {str(extract_error)}")
+                                st.success(f"✅ Extracted audio: {len(audio_data) / 1024 / 1024:.1f} MB")
+                                download_success = True
+                            
+                            except Exception as extract_error:
+                                st.warning(f"⚠️ Audio extraction failed: {str(extract_error)}")
                     
                     finally:
                         import shutil
