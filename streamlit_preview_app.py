@@ -1655,19 +1655,18 @@ def handle_iiilab_download(options):
                 audio_url = None
                 video_url = None
                 
-                # Try to find direct audio first (faster - no extraction needed!)
+                # Find both audio AND video URLs (we need video as fallback if audio fails)
                 for media in medias:
                     if media.get('media_type') == 'audio' and media.get('resource_url'):
                         audio_url = media['resource_url']
-                        st.info("🎵 Found direct audio URL - skipping video extraction!")
-                        break
+                    elif media.get('media_type') == 'video' and media.get('resource_url'):
+                        video_url = media['resource_url']
                 
-                # Fallback: Find video if no audio found
-                if not audio_url:
-                    for media in medias:
-                        if media.get('media_type') == 'video' and media.get('resource_url'):
-                            video_url = media['resource_url']
-                            break
+                # Show what we found
+                if audio_url:
+                    st.info("🎵 Found direct audio URL - will try audio first, video as fallback")
+                elif video_url:
+                    st.info("🎬 No audio URL found - will extract from video")
                 
                 if not audio_url and not video_url:
                     st.error("❌ No valid audio or video URL found")
@@ -1676,13 +1675,13 @@ def handle_iiilab_download(options):
                     return
             
             # Download audio (either direct or extract from video)
-            temp_audio_path = None
+            audio_data = None
+            download_success = False  # Track if audio download succeeded
             
             if audio_url:
                 # Direct audio download with retry logic and progress
                 max_retries = 3
                 retry_delay = 2
-                download_success = False
                 
                 for attempt in range(max_retries):
                     try:
@@ -1778,7 +1777,14 @@ def handle_iiilab_download(options):
             if not audio_url or (audio_url and not download_success):
                 # Fallback: Extract audio from video with progress
                 if not video_url:
-                    raise Exception("No video URL available for fallback extraction")
+                    st.error("❌ No video URL available for fallback extraction")
+                    st.info("💡 The iiiLab API only provided audio URL, but the audio download failed. Try a different video or check if the video has age restrictions.")
+                    with st.expander("🔍 Available Media URLs"):
+                        st.json({
+                            "audio_url": audio_url if audio_url else "Not found",
+                            "video_url": video_url if video_url else "Not found"
+                        })
+                    return
                     
                 max_retries = 3
                 retry_delay = 2
