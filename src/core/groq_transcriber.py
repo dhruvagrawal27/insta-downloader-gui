@@ -321,7 +321,7 @@ Input:
 {transcription_text}
 
 Output:
-Provide the transcription maintaining the original language choice - English content in English, Hindi/Hinglish content in Roman script Hinglish ONLY.
+Provide the transcription maintaining the original language choice - English content in English, Hindi/Hinglish content in Roman script Hinglish ONLY like देख would be written as Dekh.
 
 Return ONLY the cleaned transcription text without any additional commentary or formatting markers."""
 
@@ -330,6 +330,8 @@ Return ONLY the cleaned transcription text without any additional commentary or 
             try:
                 if progress_callback:
                     progress_callback("", 70, f"Using {model_name} for post-processing...")
+                
+                print(f"[DEBUG] Attempting LLM post-processing with model: {model_name}")
                 
                 chat_completion = self.client.chat.completions.create(
                     messages=[
@@ -349,6 +351,10 @@ Return ONLY the cleaned transcription text without any additional commentary or 
                 
                 cleaned_text = chat_completion.choices[0].message.content.strip()
                 
+                print(f"[DEBUG] LLM post-processing successful with {model_name}")
+                print(f"[DEBUG] Input length: {len(transcription_text)} chars")
+                print(f"[DEBUG] Output length: {len(cleaned_text)} chars")
+                
                 if progress_callback:
                     progress_callback("", 90, "Post-processing completed")
                 
@@ -356,9 +362,10 @@ Return ONLY the cleaned transcription text without any additional commentary or 
                 
             except Exception as e:
                 error_msg = f"LLM post-processing with {model_name} failed: {str(e)}"
-                print(f"Warning: {error_msg}")
+                print(f"[ERROR] {error_msg}")
                 if model_name == self.llm_models[-1]:  # Last model
                     # If all models fail, return original transcription
+                    print(f"[WARNING] All LLM models failed, returning raw transcription")
                     if progress_callback:
                         progress_callback("", 90, "Using raw transcription (post-processing failed)")
                     return transcription_text

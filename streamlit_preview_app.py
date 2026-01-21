@@ -61,10 +61,20 @@ except ImportError:
     YT_DLP_WEB = False
 
 from src.core.transcriber import AudioTranscriber
-from src.core.groq_transcriber import GroqTranscriber
 from src.utils.lazy_imports import lazy_import_instaloader
-from groq import Groq
 import json
+
+# Lazy import for Groq-related modules (only imported when needed)
+def lazy_import_groq():
+    """Lazy import for Groq transcriber and client."""
+    try:
+        from src.core.groq_transcriber import GroqTranscriber
+        from groq import Groq
+        return GroqTranscriber, Groq
+    except ImportError as e:
+        st.error(f"Failed to import Groq modules: {e}")
+        st.info("Please install: pip install groq")
+        return None, None
 
 
 class PreviewDownloader:
@@ -77,8 +87,12 @@ class PreviewDownloader:
         # Initialize appropriate transcriber
         if use_groq and groq_api_key:
             try:
-                self.audio_transcriber = GroqTranscriber(api_key=groq_api_key)
-                self.transcriber_type = "groq"
+                GroqTranscriber, _ = lazy_import_groq()
+                if GroqTranscriber:
+                    self.audio_transcriber = GroqTranscriber(api_key=groq_api_key)
+                    self.transcriber_type = "groq"
+                else:
+                    raise ImportError("Failed to import GroqTranscriber")
             except Exception as e:
                 st.warning(f"Failed to initialize Groq transcriber: {e}. Falling back to Whisper.")
                 self.audio_transcriber = AudioTranscriber()
@@ -650,6 +664,13 @@ def generate_ai_video_prompts(script: str, prompt_type: str, cameo_usernames: Li
     
     try:
         # Initialize Groq client
+        GroqTranscriber, Groq = lazy_import_groq()
+        if not Groq:
+            return {
+                "success": False,
+                "error": "Failed to import Groq client"
+            }
+        
         client = Groq(api_key=groq_api_key)
         
         # Format cameo string
@@ -1516,8 +1537,11 @@ def handle_rapidapi_download(options):
             # Step 4: Transcribe with Groq
             progress_placeholder.info("🎤 Transcribing to Hinglish (this may take a minute)...")
             
-            from src.core.groq_transcriber import GroqTranscriber
-            import tempfile
+            GroqTranscriber, _ = lazy_import_groq()
+            if not GroqTranscriber:
+                progress_placeholder.empty()
+                st.error("❌ Failed to import Groq transcriber")
+                return
             
             transcriber = GroqTranscriber(api_key=groq_api_key)
             
@@ -1674,11 +1698,98 @@ def handle_iiilab_download(options):
                         st.json(medias)
                     return
             
-            # Download audio (either direct or extract from video)
+            # Download audio (try yt-dlp first, then iiiLab URLs)
             audio_data = None
-            download_success = False  # Track if audio download succeeded
+            download_success = False
             
-            if audio_url:
+            # Method 1: Try yt-dlp (more reliable for YouTube)
+            try:
+                import subprocess
+                import tempfile
+                from pathlib import Path
+                import json
+                
+                # Create temp directory
+                temp_dir = tempfile.mkdtemp()
+                output_path = Path(temp_dir) / "audio.%(ext)s"
+                progress_file = Path(temp_dir) / "progress.txt"
+                
+                # Progress tracking
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                try:
+                    # Download audio-only using yt-dlp with progress
+                    # Use simpler output format for better progress parsing
+                    cmd = [
+                        "yt-dlp",
+                        "-f", "bestaudio",
+                        "-o", str(output_path),
+                        url_input.strip(),
+                        "--no-playlist",
+                        "--newline",
+                        "--progress"
+                    ]
+                    
+                    # Run with real-time progress
+                    process = subprocess.Popen(
+                        cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,  # Combine stderr into stdout
+                        text=True,
+                        bufsize=1,
+                        universal_newlines=True
+                    )
+                    
+                    # Parse progress in real-time
+                    for line in iter(process.stdout.readline, ''):
+                        line = line.strip()
+                        if line:
+                            # Look for download progress in yt-dlp output
+                            # Format: [download]  50.0% of 10.00MiB at 1.00MiB/s ETA 00:05
+                            if '[download]' in line and '%' in line:
+                                try:
+                                    # Extract percentage
+                                    if '%' in line:
+                                        percent_str = line.split('%')[0].split()[-1]
+                                        percent = float(percent_str)
+                                        progress_bar.progress(min(percent / 100.0, 1.0))
+                                        
+                                        # Show full status line
+                                        status_text.text(f"📥 {line}")
+                                except:
+                                    pass
+                            # Also show other download-related messages
+                            elif '[download]' in line or 'Downloading' in line:
+                                status_text.text(f"📥 {line}")
+                    
+                    process.wait()
+                    
+                    # Clear progress indicators
+                    progress_bar.empty()
+                    status_text.empty()
+                    
+                    if process.returncode == 0:
+                        # Find downloaded file
+                        audio_files = list(Path(temp_dir).glob("audio.*"))
+                        if audio_files:
+                            audio_file = audio_files[0]
+                            with open(audio_file, 'rb') as f:
+                                audio_data = f.read()
+                            st.success(f"✅ Downloaded audio with yt-dlp: {len(audio_data) / 1024 / 1024:.1f} MB")
+                            download_success = True
+                    
+                finally:
+                    # Cleanup
+                    import shutil
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                        
+            except Exception as e:
+                st.info(f"ℹ️ yt-dlp method unavailable: {str(e)}")
+                st.info("🔄 Trying alternative download method...")
+            
+            # Method 2: Use iiiLab API URLs (fallback)
+            if not download_success and audio_url:
                 # Direct audio download with retry logic and progress
                 max_retries = 3
                 retry_delay = 2
@@ -1769,22 +1880,113 @@ def handle_iiilab_download(options):
                             else:
                                 raise
                 
-                # If audio download failed due to 403, fall back to video extraction
+                # If audio download failed, fall back to video extraction
                 if not download_success and video_url:
                     st.info("🎬 Falling back to video download and audio extraction...")
                     audio_url = None  # Force video extraction path
             
-            if not audio_url or (audio_url and not download_success):
-                # Fallback: Extract audio from video with progress
-                if not video_url:
-                    st.error("❌ No video URL available for fallback extraction")
-                    st.info("💡 The iiiLab API only provided audio URL, but the audio download failed. Try a different video or check if the video has age restrictions.")
-                    with st.expander("🔍 Available Media URLs"):
-                        st.json({
-                            "audio_url": audio_url if audio_url else "Not found",
-                            "video_url": video_url if video_url else "Not found"
-                        })
-                    return
+            # Method 3: Extract audio from video (last resort)
+            if not download_success and video_url:
+                # Try yt-dlp for video first
+                try:
+                    import subprocess
+                    import tempfile
+                    from pathlib import Path
+                    
+                    temp_dir = tempfile.mkdtemp()
+                    output_path = Path(temp_dir) / "video.%(ext)s"
+                    
+                    # Progress tracking
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    try:
+                        cmd = [
+                            "yt-dlp",
+                            "-f", "best[ext=mp4]",
+                            "-o", str(output_path),
+                            url_input.strip(),
+                            "--no-playlist",
+                            "--newline",
+                            "--progress"
+                        ]
+                        
+                        # Run with real-time progress
+                        process = subprocess.Popen(
+                            cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            text=True,
+                            bufsize=1,
+                            universal_newlines=True
+                        )
+                        
+                        # Parse progress in real-time
+                        for line in iter(process.stdout.readline, ''):
+                            line = line.strip()
+                            if line:
+                                # Look for download progress
+                                if '[download]' in line and '%' in line:
+                                    try:
+                                        # Extract percentage
+                                        if '%' in line:
+                                            percent_str = line.split('%')[0].split()[-1]
+                                            percent = float(percent_str)
+                                            progress_bar.progress(min(percent / 100.0, 1.0))
+                                            
+                                            # Show full status line
+                                            status_text.text(f"🎬 {line}")
+                                    except:
+                                        pass
+                                elif '[download]' in line or 'Downloading' in line:
+                                    status_text.text(f"🎬 {line}")
+                        
+                        process.wait()
+                        
+                        # Clear progress indicators
+                        progress_bar.empty()
+                        status_text.empty()
+                        
+                        if process.returncode == 0:
+                            video_files = list(Path(temp_dir).glob("video.*"))
+                            if video_files:
+                                video_file = video_files[0]
+                                video_size_mb = video_file.stat().st_size / 1024 / 1024
+                                st.success(f"✅ Downloaded video with yt-dlp: {video_size_mb:.1f} MB")
+                                
+                                # Extract audio
+                                st.info("🎵 Extracting audio from video...")
+                                from moviepy.editor import VideoFileClip
+                                
+                                audio_path = Path(temp_dir) / "audio.m4a"
+                                
+                                try:
+                                    video_clip = VideoFileClip(str(video_file))
+                                    if video_clip.audio is None:
+                                        raise Exception("Video has no audio track")
+                                    
+                                    video_clip.audio.write_audiofile(str(audio_path), verbose=False, logger=None)
+                                    video_clip.close()
+                                    
+                                    with open(audio_path, 'rb') as f:
+                                        audio_data = f.read()
+                                    
+                                    st.success(f"✅ Extracted audio: {len(audio_data) / 1024 / 1024:.1f} MB")
+                                    download_success = True
+                                
+                                except Exception as extract_error:
+                                    st.warning(f"⚠️ Audio extraction failed: {str(extract_error)}")
+                    
+                    finally:
+                        import shutil
+                        shutil.rmtree(temp_dir, ignore_errors=True)
+                
+                except Exception as e:
+                    st.warning(f"⚠️ yt-dlp video method failed: {str(e)}")
+            
+            # Method 4: Direct iiiLab video URL (last resort)
+            if not download_success and video_url:
+                st.info("🔄 Trying direct video download from iiiLab URLs...")
                     
                 max_retries = 3
                 retry_delay = 2
@@ -1903,30 +2105,79 @@ def handle_iiilab_download(options):
                             os.remove(temp_video_path)
                         if os.path.exists(temp_audio_path):
                             os.remove(temp_audio_path)
+                        
+                        download_success = True
+            
+            # Check if we successfully got audio
+            if not audio_data:
+                st.error("❌ Failed to download audio using all available methods")
+                st.info("""
+                **All download methods failed:**
+                1. yt-dlp (primary method)
+                2. iiiLab direct audio URL
+                3. yt-dlp video extraction
+                4. iiiLab video URL + audio extraction
+                
+                **Possible reasons:**
+                - YouTube may have restrictions on this video
+                - Video may be age-restricted or region-locked
+                - Network connectivity issues
+                
+                **Try:**
+                - A different YouTube video
+                - Running the app locally instead of on Streamlit Cloud
+                - Checking if the video is publicly accessible
+                """)
+                return
             
             # Transcribe with Groq (using in-memory audio)
-            with st.spinner("🤖 Transcribing with Groq AI... (Hinglish processing enabled)"):
-                from src.core.groq_transcriber import GroqTranscriber
-                import tempfile
-                
-                # Create temporary file for Groq API (required for upload)
-                with tempfile.NamedTemporaryFile(suffix='.m4a', delete=False) as temp_file:
-                    temp_audio_path = temp_file.name
+            st.info("🤖 Step 1: Transcribing audio with Groq Whisper...")
+            
+            GroqTranscriber, _ = lazy_import_groq()
+            if not GroqTranscriber:
+                st.error("❌ Failed to import Groq transcriber")
+                return
+            
+            # Create temporary file for Groq API (required for upload)
+            with tempfile.NamedTemporaryFile(suffix='.m4a', delete=False) as temp_file:
+                temp_audio_path = temp_file.name
+                # Handle both bytes and BytesIO
+                if isinstance(audio_data, bytes):
+                    temp_file.write(audio_data)
+                else:
                     temp_file.write(audio_data.getvalue())
+            
+            try:
+                transcriber = GroqTranscriber()
                 
-                try:
-                    transcriber = GroqTranscriber()
-                    result = transcriber.transcribe_and_process(
-                        audio_path=temp_audio_path,
-                        enable_post_processing=True  # Hinglish processing
-                    )
+                # Step 1: Raw transcription
+                st.info("🎙️ Getting raw transcription from Whisper...")
+                result = transcriber.transcribe_and_process(
+                    audio_path=temp_audio_path,
+                    enable_post_processing=True  # Hinglish processing
+                )
+                
+                # Show intermediate results for debugging
+                with st.expander("🔍 Transcription Details (Debug Info)"):
+                    raw_text = result.get("raw_transcription", "")
+                    cleaned_text = result.get("cleaned_transcription", "")
                     
-                    # Extract the final transcript
-                    transcript = result.get("final_transcription", result.get("cleaned_transcription", ""))
-                finally:
-                    # Clean up temp file immediately after transcription
-                    if os.path.exists(temp_audio_path):
-                        os.remove(temp_audio_path)
+                    st.markdown("**Raw Whisper Output:**")
+                    st.text_area("Raw", raw_text, height=150, key="raw_transcript", label_visibility="collapsed")
+                    
+                    if cleaned_text != raw_text:
+                        st.markdown("**After Hinglish Post-Processing:**")
+                        st.text_area("Cleaned", cleaned_text, height=150, key="cleaned_transcript", label_visibility="collapsed")
+                        st.success("✅ LLM post-processing applied successfully!")
+                    else:
+                        st.warning("⚠️ LLM post-processing might have failed - showing raw output")
+                
+                # Extract the final transcript
+                transcript = result.get("final_transcription", result.get("cleaned_transcription", ""))
+            finally:
+                # Clean up temp file immediately after transcription
+                if os.path.exists(temp_audio_path):
+                    os.remove(temp_audio_path)
             
             # Display results
             st.success("✅ Transcription complete!")
